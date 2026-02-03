@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/CleanDiscPlayer.Core/CleanDiscPlayer.Core.csproj" />
+  <Project Path="src/CleanDiscPlayer.Cli/CleanDiscPlayer.Cli.csproj" />
+  <Project Path="src/CleanDiscPlayer.WindowsPlayer/CleanDiscPlayer.WindowsPlayer.csproj" />
+</Solution>
