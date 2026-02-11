@@ -6,7 +6,7 @@
     public interface IPlaybackService
     {
         /// <summary>
-        /// Initializes LibVLC and input variables.
+        /// Initializes LibVLC, input variables, and event for continuing to next track when current track ends.
         /// Example driveLetter: "Z:\\" 
         /// </summary>
         /// <param name="drivePath"></param>

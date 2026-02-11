@@ -24,6 +24,31 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
             _libVlc = new LibVLC();
             _mediaPlayer = new MediaPlayer(_libVlc);
+
+            // EndReached fires on a VLC internal thread, so we must dispatch
+            // the next track call onto a separate thread to avoid deadlocking VLC
+            _mediaPlayer.EndReached += (sender, e) =>
+            {
+                Task.Run(() => AdvanceTrack());
+            };
+        }
+
+        /// <summary>
+        /// Called automatically when the current track ends.
+        /// </summary>
+        private void AdvanceTrack()
+        {
+            if (_currentTrack < _trackCount)
+            {
+                PlayTrack(_currentTrack + 1);
+                Console.Write("Enter command: ");
+            }
+            else
+            {
+                Console.WriteLine("\nEnd of disc.");
+                this.StopPlayback();
+                Console.Write("Enter command: ");
+            }
         }
 
         public void PlayFromBeginning()
@@ -44,7 +69,7 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             media.AddOption($":cdda-track={trackNumber}");
             _currentTrack = trackNumber;
             _mediaPlayer.Play(media);
-            Console.WriteLine($"Playing track {_currentTrack} of {_trackCount}");
+            Console.WriteLine($"\nPlaying track {_currentTrack} of {_trackCount}");
         }
 
         public void PausePlayback()

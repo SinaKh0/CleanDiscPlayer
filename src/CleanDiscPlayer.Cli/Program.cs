@@ -1,5 +1,7 @@
 ﻿using CleanDiscPlayer.WindowsPlayer.Disc;
 using CleanDiscPlayer.WindowsPlayer.Playback;
+using System.Collections.Generic;
+using System.Numerics;
 
 namespace CleanDiscPlayer.Cli
 {
@@ -34,8 +36,8 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine($"Tracks:    {disc.TrackCount}");
                 //Console.WriteLine($"TOC ID:    {disc.TOCId}");
             }
-            Console.WriteLine("\nPress ENTER to continue...");
-            Console.ReadLine();
+            //Console.WriteLine("\nPress ENTER to continue...");
+            //Console.ReadLine();
 
             WindowsPlaybackService mediaPlayer = new WindowsPlaybackService();
             mediaPlayer.Init(disc.DevicePath, disc.TrackCount);
@@ -114,7 +116,7 @@ namespace CleanDiscPlayer.Cli
                         case "eject":
                             mediaPlayer.StopPlayback(); // Ensure playback is stopped before ejecting
                             discService.EjectDisc(disc.DevicePath);
-                            //break; // No need to break here since we want to end the loop with exit after ejecting
+                            // break; //TODO: listen for disc inserted event and reinitialize player instead of exiting application
                             return;
 
                         case "exit":
