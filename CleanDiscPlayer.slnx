@@ -1,5 +1,15 @@
 <Solution>
-  <Project Path="src/CleanDiscPlayer.Core/CleanDiscPlayer.Core.csproj" />
-  <Project Path="src/CleanDiscPlayer.Cli/CleanDiscPlayer.Cli.csproj" />
-  <Project Path="src/CleanDiscPlayer.WindowsPlayer/CleanDiscPlayer.WindowsPlayer.csproj" />
+  <Project Path="src/CleanDiscPlayer.Core/CleanDiscPlayer.Core.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="src/CleanDiscPlayer.Cli/CleanDiscPlayer.Cli.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
+  <Project Path="src/CleanDiscPlayer.WindowsPlayer/CleanDiscPlayer.WindowsPlayer.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
 </Solution>

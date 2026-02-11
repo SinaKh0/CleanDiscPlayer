@@ -4,7 +4,7 @@ using MetaBrainz.MusicBrainz.DiscId;
 
 namespace CleanDiscPlayer.WindowsPlayer.Disc
 {
-    public class WindowsDiscService
+    public class WindowsDiscService : IDiscService
     {
         public DiscInfo? GetDiscInfo()
         {
