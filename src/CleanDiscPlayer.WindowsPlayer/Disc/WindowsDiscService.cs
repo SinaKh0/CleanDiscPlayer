@@ -117,8 +117,6 @@ namespace CleanDiscPlayer.WindowsPlayer.Disc
             {
                 Console.WriteLine($"Error ejecting disc: {ex.Message}");
             }
-
-            Console.ReadLine();
         }
     }
 }

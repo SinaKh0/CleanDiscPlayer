@@ -4,6 +4,9 @@ namespace CleanDiscPlayer.WindowsPlayer.Disc
 {
     public static class DiscIdTest
     {
+        //// inside Main or Run() put:
+        //DiscIdTest.Run();
+        //Console.ReadLine();
         public static void Run()
         {
             var drives = FindCdDrives();

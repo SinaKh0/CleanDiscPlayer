@@ -14,6 +14,7 @@ namespace CleanDiscPlayer.Cli
         /// </summary>
         private static void Run()
         {
+            Console.WriteLine("=== CleanDisc Player CLI ===");
             WindowsDiscService discService = new WindowsDiscService();
 
             var disc = discService.GetDiscInfo();
@@ -31,25 +32,8 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine($"Tracks:    {disc.TrackCount}");
                 Console.WriteLine($"TOC ID:    {disc.TOCId}");
             }
+            Console.WriteLine("\nPress ENTER to continue...");
             Console.ReadLine();
-
-            discService.EjectDisc("Z"); // FIXME: Replace with actual drive letter from disc info
-            Console.ReadLine();
-
-            // inside Main or Run()
-            DiscIdTest.Run();
-            Console.ReadLine();
-
-            Console.WriteLine("CleanDisc Player CLI");
-            Console.WriteLine("Press ENTER to start playback of disc...");
-            Console.ReadLine(); // FIXME: Replace with proper argument parsing
-
-            // TODO: Implement disc playback logic here 
-
-            Console.WriteLine("Playing. Press ENTER to stop...");
-            Console.ReadLine();
-
-            // TODO: Implement disc stop logic here
 
             while (true)
             {
@@ -58,8 +42,8 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine("Commands:");
                 Console.WriteLine("  play   - Start playback");
                 Console.WriteLine("  stop   - Stop playback");
+                Console.WriteLine("  eject  - Eject disc and exit application");
                 Console.WriteLine("  exit   - Exit application");
-                Console.WriteLine("  other commands...");
                 Console.Write("Enter command: ");
 
                 var command = Console.ReadLine()?.Trim().ToLower();
@@ -107,8 +91,10 @@ namespace CleanDiscPlayer.Cli
                         break;
 
                     case "eject":
-                        // TODO: Implement disc eject logic here
-                        break;
+                        // todo stop playback if necessary before ejecting
+                        discService.EjectDisc("Z"); // FIXME: Replace with actual drive letter from disc info
+                        //break; // No need to break here since we want to end the loop with exit after ejecting
+                        return;
 
                     case "exit":
                         // TODO: Stop CD and Clean up resources if necessary
