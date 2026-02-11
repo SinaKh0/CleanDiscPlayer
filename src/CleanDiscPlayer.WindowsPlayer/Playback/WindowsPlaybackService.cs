@@ -47,6 +47,18 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             Console.WriteLine($"Playing track {_currentTrack} of {_trackCount}");
         }
 
+        public void PausePlayback()
+        {
+            _mediaPlayer?.Pause();
+            Console.WriteLine("Playback paused.");
+        }
+
+        public void ResumePlayback()
+        {
+            _mediaPlayer?.Play();
+            Console.WriteLine("Playback resumed.");
+        }
+
         public void StopPlayback()
         {
             _mediaPlayer?.Stop();

@@ -47,6 +47,8 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine("Commands:");
                 Console.WriteLine("  play   - Start playback");
                 Console.WriteLine("  play # - Play specified track number");
+                Console.WriteLine("  pause  - Resume playback");
+                Console.WriteLine("  resume - Skip to next track");
                 Console.WriteLine("  stop   - Stop playback");
                 Console.WriteLine("  eject  - Eject disc and exit application");
                 Console.WriteLine("  exit   - Exit application");
@@ -65,6 +67,10 @@ namespace CleanDiscPlayer.Cli
                     {
                         case "play":
                             mediaPlayer.PlayFromBeginning();
+                            break;
+
+                        case "resume":
+                            mediaPlayer.ResumePlayback();
                             break;
 
                         case "next":
@@ -92,7 +98,7 @@ namespace CleanDiscPlayer.Cli
                             break;
 
                         case "pause":
-                            // TODO: Implement disc pause logic here
+                            mediaPlayer.PausePlayback();
                             break;
 
                         case "stop":

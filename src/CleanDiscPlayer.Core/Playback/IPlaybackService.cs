@@ -25,6 +25,21 @@
         public void PlayFromBeginning();
 
         /// <summary>
+        /// Pauses the current playback if it is in progress.
+        /// </summary>
+        /// <remarks>Call this method to temporarily halt playback without resetting the current position.
+        /// Use a corresponding resume method to continue playback from the paused position. If playback is
+        /// already paused or stopped, this method has no effect.</remarks>
+        public void PausePlayback();
+
+        /// <summary>
+        /// Resumes playback if it is currently paused.
+        /// </summary>
+        /// <remarks>If playback is not paused, calling this method has no effect. This method does not
+        /// restart playback if it has already completed or has not been started.</remarks>
+        public void ResumePlayback();
+
+        /// <summary>
         /// Stops audio playback if it is currently in progress.
         /// </summary>
         public void StopPlayback();
