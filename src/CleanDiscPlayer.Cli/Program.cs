@@ -1,4 +1,5 @@
 ﻿using System;
+using CleanDiscPlayer.WindowsPlayer.Disc;
 
 namespace CleanDiscPlayer.Cli
 {
@@ -14,6 +15,10 @@ namespace CleanDiscPlayer.Cli
         /// </summary>
         private static void Run()
         {
+            // inside Main or Run()
+            DiscIdTest.Run();
+            Console.ReadLine();
+
             Console.WriteLine("CleanDisc Player CLI");
             Console.WriteLine("Press ENTER to start playback of disc...");
             Console.ReadLine(); // FIXME: Replace with proper argument parsing
@@ -74,6 +79,10 @@ namespace CleanDiscPlayer.Cli
 
                     case "stop":
                         // TODO: Implement disc stop logic here
+                        break;
+
+                    case "tracklist":
+                        // TODO: Implement track listing logic here
                         break;
 
                     case "eject":

@@ -7,4 +7,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\CleanDiscPlayer.Core\CleanDiscPlayer.Core.csproj" />
+    <ProjectReference Include="..\CleanDiscPlayer.WindowsPlayer\CleanDiscPlayer.WindowsPlayer.csproj" />
+  </ItemGroup>
+
 </Project>
