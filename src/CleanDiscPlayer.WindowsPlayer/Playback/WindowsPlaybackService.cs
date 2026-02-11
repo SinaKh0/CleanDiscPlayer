@@ -59,10 +59,45 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             Console.WriteLine("Playback resumed.");
         }
 
+        public void SkipToNextTrack()
+        {
+            if (_currentTrack >= _trackCount)
+            {
+                Console.WriteLine("Already on last track.");
+                return;
+            }
+            PlayTrack(++_currentTrack);
+            Console.WriteLine($"Track {_currentTrack} of {_trackCount}");
+        }
+
+        public void SkipToPreviousTrack()
+        {
+            if (_currentTrack <= 1)
+            {
+                // TODO: change this to restart current track instead of doing nothing
+                Console.WriteLine("Already on first track.");
+                return;
+            }
+            // TODO: change this to restart current track if more than 5 seconds have elapsed instead of always going to previous track
+            PlayTrack(--_currentTrack);
+            Console.WriteLine($"Track {_currentTrack} of {_trackCount}");
+        }
+
         public void StopPlayback()
         {
             _mediaPlayer?.Stop();
             Console.WriteLine("Playback stopped.");
         }
+
+        public int CurrentTrack()
+        {
+            return _currentTrack;
+        }
+
+        public int TrackCount()
+        {
+            return _trackCount;
+        }
+
     }
 }

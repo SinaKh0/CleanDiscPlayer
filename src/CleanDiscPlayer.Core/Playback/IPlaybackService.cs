@@ -40,8 +40,35 @@
         public void ResumePlayback();
 
         /// <summary>
+        /// Skips playback to the next track.
+        /// </summary>
+        /// <remarks>If the current track is the last in the tracklist, playback remains unchanged.
+        /// If playback is already at the last track, will have no effect.
+        /// Calling this method when no track is currently playing also has no effect.
+        /// </remarks>
+        public void SkipToNextTrack();
+
+        /// <summary>
+        /// Skips playback to the previous track.
+        /// </summary>
+        /// <remarks>If the current track is the first in the tracklist, playback remains unchanged.
+        /// Calling this method when no track is currently playing also has no effect.
+        /// </remarks>
+        public void SkipToPreviousTrack();
+
+        /// <summary>
         /// Stops audio playback if it is currently in progress.
         /// </summary>
         public void StopPlayback();
+
+        /// <summary>
+        /// Returns the current track number (1-based).
+        /// </summary>
+        public int CurrentTrack();
+
+        /// <summary>
+        /// Returns the total number of tracks on the disc.
+        /// </summary>
+        public int TrackCount();
     }
 }

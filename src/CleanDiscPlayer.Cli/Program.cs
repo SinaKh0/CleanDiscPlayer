@@ -32,7 +32,7 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine($"Disc ID:   {disc.DiscId}");
                 Console.WriteLine($"Duration:  {disc.Duration}");
                 Console.WriteLine($"Tracks:    {disc.TrackCount}");
-                Console.WriteLine($"TOC ID:    {disc.TOCId}");
+                //Console.WriteLine($"TOC ID:    {disc.TOCId}");
             }
             Console.WriteLine("\nPress ENTER to continue...");
             Console.ReadLine();
@@ -49,6 +49,8 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine("  play # - Play specified track number");
                 Console.WriteLine("  pause  - Resume playback");
                 Console.WriteLine("  resume - Skip to next track");
+                Console.WriteLine("  prev   - Skip to previous track");
+                Console.WriteLine("  next   - Skip to next track");
                 Console.WriteLine("  stop   - Stop playback");
                 Console.WriteLine("  eject  - Eject disc and exit application");
                 Console.WriteLine("  exit   - Exit application");
@@ -74,11 +76,11 @@ namespace CleanDiscPlayer.Cli
                             break;
 
                         case "next":
-                            // TODO: Implement skip next track logic here
+                            mediaPlayer.SkipToNextTrack();
                             break;
 
                         case "prev":
-                            // TODO: Implement skip prev track logic here
+                            mediaPlayer.SkipToPreviousTrack();
                             break;
 
                         case "skip":
