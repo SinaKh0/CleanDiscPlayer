@@ -114,6 +114,47 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             Console.WriteLine("Playback stopped.");
         }
 
+        public void ChangeVolume(int volume)
+        {
+            if (volume < 0 || volume > 100)
+            {
+                Console.WriteLine("Volume must be between 0 and 100.");
+                return;
+            }
+            _mediaPlayer.Volume = volume;
+            Console.WriteLine($"Volume set to {volume}%.");
+        }
+
+
+        
+        public void SeekTo(string seekTimeStr)
+        {
+            // https://learn.microsoft.com/en-us/dotnet/api/system.timespan.tryparse?view=net-10.0
+            // If format is "mm:ss", prepend "00:" to make it "00:mm:ss"
+            string normalized = seekTimeStr.Split(':').Length == 2
+                ? $"00:{seekTimeStr}"
+                : seekTimeStr;
+
+            if (!TimeSpan.TryParse(normalized, out TimeSpan seekTime))
+            {
+                Console.WriteLine("Invalid time format. Use mm:ss or hh:mm:ss");
+                return;
+            }
+
+            long trackLengthMs = _mediaPlayer.Length;
+            long seekMs = (long)seekTime.TotalMilliseconds;
+
+            if (seekMs > trackLengthMs)
+            {
+                Console.WriteLine($"Cannot seek to {seekTime:mm\\:ss} - track is only {TimeSpan.FromMilliseconds(trackLengthMs):mm\\:ss} long");
+                return;
+            }
+
+            _mediaPlayer.Time = seekMs;
+            Console.WriteLine($"Seeking to {seekTime:mm\\:ss}");
+        }
+
+
         public int CurrentTrack()
         {
             return _currentTrack;
@@ -124,5 +165,22 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             return _trackCount;
         }
 
+        public void LogCurrentState()
+        {
+            Console.WriteLine($"\nCurrent Track: {_currentTrack}");
+            Console.WriteLine($"Track Count: {_trackCount}");
+            Console.WriteLine($"Media Player State: {_mediaPlayer?.State}");
+            Console.WriteLine($"Volume: {_mediaPlayer?.Volume}%");
+            // https://stackoverflow.com/questions/68367609/vlc-libvlc-state-t-state-machine
+            // if media player state is nothing special or ended, then dont compute these lines:
+            if (_mediaPlayer?.State != VLCState.NothingSpecial && _mediaPlayer?.State != VLCState.Ended && _mediaPlayer?.State != VLCState.Stopped)
+            {
+                Console.WriteLine($"Seekable: {_mediaPlayer?.IsSeekable}");
+                Console.WriteLine($"Time (ms): {_mediaPlayer?.Time}");
+                Console.WriteLine($"Position (%): {_mediaPlayer?.Position}");
+                Console.WriteLine($"Length (ms): {_mediaPlayer?.Length}\n");
+            }
+
+        }
     }
 }

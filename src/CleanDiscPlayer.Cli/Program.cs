@@ -53,9 +53,12 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine("  resume - Skip to next track");
                 Console.WriteLine("  prev   - Skip to previous track");
                 Console.WriteLine("  next   - Skip to next track");
+                Console.WriteLine("  seek t - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
+                Console.WriteLine("  volume - Adjust volume of player (0-100%)");
                 Console.WriteLine("  stop   - Stop playback");
                 Console.WriteLine("  eject  - Eject disc and exit application");
                 Console.WriteLine("  exit   - Exit application");
+                Console.WriteLine("  log    - Provides some info on status of player");
                 Console.Write("Enter command: ");
 
                 var command = Console.ReadLine()?.Trim().ToLower();
@@ -65,10 +68,23 @@ namespace CleanDiscPlayer.Cli
                 {
                     mediaPlayer.PlayTrack(trackNumber);
                 }
+                else if (command.StartsWith("volume ") && int.TryParse(command.Split(' ')[1], out int volumeNumber))
+                {
+                    mediaPlayer.ChangeVolume(volumeNumber);
+                }
+                else if (command.StartsWith("seek "))
+                {
+                    string seekTimeStr = command.Split(' ')[1]; //command.Substring(5).Trim(); // Get the part after "seek "
+                    mediaPlayer.SeekTo(seekTimeStr);
+                }
                 else
                 {
                     switch (command)
                     {
+                        case "log":
+                            mediaPlayer.LogCurrentState();
+                            break;
+
                         case "play":
                             mediaPlayer.PlayFromBeginning();
                             break;
@@ -85,20 +101,12 @@ namespace CleanDiscPlayer.Cli
                             mediaPlayer.SkipToPreviousTrack();
                             break;
 
-                        case "skip":
-                            // TODO: Implement skip to time position on track logic here
-                            break;
-
                         case "repeat":
                             // TODO: Implement repeat logic (2 modes: repeat disc, repeat track) here
                             break;
 
                         case "shuffle":
                             // TODO: Implement shuffle logic here
-                            break;
-
-                        case "volume":
-                            // TODO: Implement volume adjustment logic here
                             break;
 
                         case "pause":

@@ -62,6 +62,19 @@
         public void StopPlayback();
 
         /// <summary>
+        /// Sets the playback volume to the specified level.
+        /// </summary>
+        /// <param name="volume">The desired volume level. Valid values are typically in the range 0 (mute) to 100 (maximum volume).</param>
+        public void ChangeVolume(int volume);
+
+        /// <summary>
+        /// Seeks to the specified position in the media, as indicated by the provided time string.
+        /// </summary>
+        /// <param name="seekTimeStr">A string representing the target position to seek to, typically formatted as a time value (for example,
+        /// "00:01:30" for 1 minute and 30 seconds).</param>
+        public void SeekTo(string seekTimeStr);
+
+        /// <summary>
         /// Returns the current track number (1-based).
         /// </summary>
         public int CurrentTrack();
@@ -70,5 +83,10 @@
         /// Returns the total number of tracks on the disc.
         /// </summary>
         public int TrackCount();
+
+        /// <summary>
+        /// Logs the current state of the object for debugging or monitoring purposes.
+        /// </summary>
+        public void LogCurrentState();
     }
 }
