@@ -1,5 +1,4 @@
-﻿using System.Management;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using CleanDiscPlayer.Core.Disc;
 using MetaBrainz.MusicBrainz.DiscId;
 

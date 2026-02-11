@@ -92,7 +92,7 @@ namespace CleanDiscPlayer.Cli
 
                     case "eject":
                         // todo stop playback if necessary before ejecting
-                        discService.EjectDisc("Z"); // FIXME: Replace with actual drive letter from disc info
+                        discService.EjectDisc(disc.DevicePath);
                         //break; // No need to break here since we want to end the loop with exit after ejecting
                         return;
 
