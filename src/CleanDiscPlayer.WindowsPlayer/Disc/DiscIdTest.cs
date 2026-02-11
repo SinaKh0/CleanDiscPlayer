@@ -74,7 +74,6 @@ namespace CleanDiscPlayer.WindowsPlayer.Disc
                     Console.WriteLine($"  Number:       {track.Number}");
                     Console.WriteLine($"  Offset:       {track.Offset}");
                     Console.WriteLine($"  Start Time:   {track.StartTime}");
-                    Console.WriteLine($"  Start Time:   {track.StartTime}");
                     Console.WriteLine($"  Text Info:    {track.TextInfo}");
                 }
 

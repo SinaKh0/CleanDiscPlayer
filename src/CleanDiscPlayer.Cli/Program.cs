@@ -1,5 +1,4 @@
-﻿using System;
-using CleanDiscPlayer.WindowsPlayer.Disc;
+﻿using CleanDiscPlayer.WindowsPlayer.Disc;
 
 namespace CleanDiscPlayer.Cli
 {
@@ -15,6 +14,28 @@ namespace CleanDiscPlayer.Cli
         /// </summary>
         private static void Run()
         {
+            WindowsDiscService discService = new WindowsDiscService();
+
+            var disc = discService.GetDiscInfo();
+
+            if (disc == null)
+            {
+                Console.WriteLine("No disc found, exiting.");
+                return;
+            }
+            else
+            {
+                Console.WriteLine($"Drive:     {disc.DevicePath}");
+                Console.WriteLine($"Disc ID:   {disc.DiscId}");
+                Console.WriteLine($"Duration:  {disc.Duration}");
+                Console.WriteLine($"Tracks:    {disc.TrackCount}");
+                Console.WriteLine($"TOC ID:    {disc.TOCId}");
+            }
+            Console.ReadLine();
+
+            discService.EjectDisc("Z"); // FIXME: Replace with actual drive letter from disc info
+            Console.ReadLine();
+
             // inside Main or Run()
             DiscIdTest.Run();
             Console.ReadLine();
