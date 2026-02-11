@@ -100,6 +100,7 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             if (_currentTrack <= 1)
             {
                 // TODO: change this to restart current track instead of doing nothing
+                // if on shuffle mode, change this to go to previously played track instead of previous track in tracklist
                 Console.WriteLine("Already on first track.");
                 return;
             }
@@ -181,6 +182,18 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
                 Console.WriteLine($"Length (ms): {_mediaPlayer?.Length}\n");
             }
 
+        }
+
+        public void RepeatMode(int mode)
+        {
+            // TODO: implement repeat mode (3 modes: no repeat, repeat disc, repeat track)
+            throw new NotImplementedException();
+        }
+
+        public void ShuffleMode(bool enabled)
+        {
+            // TODO: implement shuffle mode
+            throw new NotImplementedException();
         }
     }
 }

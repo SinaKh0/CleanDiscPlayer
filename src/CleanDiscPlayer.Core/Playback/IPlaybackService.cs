@@ -88,5 +88,17 @@
         /// Logs the current state of the object for debugging or monitoring purposes.
         /// </summary>
         public void LogCurrentState();
+
+        /// <summary>
+        /// Sets the repeat mode for playback.
+        /// </summary>
+        /// <param name="mode">An integer value that specifies the repeat mode to apply (3 modes: no repeat, repeat disc, repeat track).</param>
+        public void RepeatMode(int mode);
+
+        /// <summary>
+        /// Enables or disables shuffle mode for playback.
+        /// </summary>
+        /// <param name="enabled">true to enable shuffle mode; false to disable it.</param>
+        public void ShuffleMode(bool enabled);
     }
 }

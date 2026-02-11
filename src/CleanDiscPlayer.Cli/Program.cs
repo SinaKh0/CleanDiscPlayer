@@ -102,11 +102,11 @@ namespace CleanDiscPlayer.Cli
                             break;
 
                         case "repeat":
-                            // TODO: Implement repeat logic (2 modes: repeat disc, repeat track) here
+                            // TODO: Implement repeat logic (3 modes: no repeat, repeat disc, repeat track)
                             break;
 
                         case "shuffle":
-                            // TODO: Implement shuffle logic here
+                            // TODO: Implement shuffle logic
                             break;
 
                         case "pause":
