@@ -5,14 +5,22 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 {
     public class WindowsPlaybackService : IPlaybackService
     {
+        private bool _initialized = false;
         private LibVLC _libVlc;
         private MediaPlayer _mediaPlayer;
         private string _currentDrive;
         private int _currentTrack = 1;
         private int _trackCount = 0;
 
+        private const int MinVolume = 0;
+        private const int MaxVolume = 100;
+
         public void Init(string driveLetter, int trackCount)
         {
+            if (_initialized)
+                throw new InvalidOperationException("Already initialized");
+
+            _initialized = true;
             _currentDrive = driveLetter.TrimEnd('\\').TrimEnd('/');
             _trackCount = trackCount;
 
@@ -58,9 +66,9 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         public void PlayTrack(int trackNumber)
         {
-            if (trackNumber < 1 || trackNumber > _trackCount)
+            if (!IsValidTrack(trackNumber, out string error))
             {
-                Console.WriteLine($"Invalid track. Disc has {_trackCount} tracks.");
+                Console.WriteLine(error);
                 return;
             }
 
@@ -71,6 +79,23 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             _mediaPlayer.Play(media);
             Console.WriteLine($"\nPlaying track {_currentTrack} of {_trackCount}");
         }
+
+        private bool IsValidTrack(int trackNumber, out string errorMessage)
+        {
+            if (trackNumber < 1)
+            {
+                errorMessage = "Track number must be positive and start from 1.";
+                return false;
+            }
+            if (trackNumber > _trackCount)
+            {
+                errorMessage = $"Track {trackNumber} exceeds disc track count ({_trackCount}).";
+                return false;
+            }
+            errorMessage = null;
+            return true;
+        }
+
 
         public void PausePlayback()
         {
@@ -117,9 +142,9 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         public void ChangeVolume(int volume)
         {
-            if (volume < 0 || volume > 100)
+            if (volume < MinVolume || volume > MaxVolume)
             {
-                Console.WriteLine("Volume must be between 0 and 100.");
+                Console.WriteLine($"Volume must be between {MinVolume} and {MaxVolume}.");
                 return;
             }
             _mediaPlayer.Volume = volume;
