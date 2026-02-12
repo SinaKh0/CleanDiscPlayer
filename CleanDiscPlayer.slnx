@@ -1,15 +1,22 @@
 <Solution>
-  <Project Path="src/CleanDiscPlayer.Core/CleanDiscPlayer.Core.csproj">
-    <Platform Solution="*|x64" Project="x64" />
-  </Project>
   <Configurations>
     <Platform Name="Any CPU" />
     <Platform Name="x64" />
+    <Platform Name="x86" />
   </Configurations>
   <Project Path="src/CleanDiscPlayer.Cli/CleanDiscPlayer.Cli.csproj">
     <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    <Build Solution="*|Any CPU" Project="false" />
+  </Project>
+  <Project Path="src/CleanDiscPlayer.Core/CleanDiscPlayer.Core.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    <Build Solution="*|Any CPU" Project="false" />
   </Project>
   <Project Path="src/CleanDiscPlayer.WindowsPlayer/CleanDiscPlayer.WindowsPlayer.csproj">
     <Platform Solution="*|x64" Project="x64" />
+    <Platform Solution="*|x86" Project="x86" />
+    <Build Solution="*|Any CPU" Project="false" />
   </Project>
 </Solution>
