@@ -1,25 +1,31 @@
-﻿using CleanDiscPlayer.WindowsPlayer.Disc;
+﻿using CleanDiscPlayer.Core.Metadata;
+using CleanDiscPlayer.WindowsPlayer.Disc;
 using CleanDiscPlayer.WindowsPlayer.Playback;
-using System.Collections.Generic;
-using System.Numerics;
+using System.Text;
 
 namespace CleanDiscPlayer.Cli
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            Run();
+            // change encoding to UTF-8 to support special characters in metadata and track titles
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.InputEncoding = Encoding.UTF8;
+
+            await Run();
         }
 
         /// <summary>
         /// Starts the CLI loop, waits for user input to play or stop CD playback.
         /// </summary>
-        private static void Run()
+        private static async Task Run()
         {
             Console.WriteLine("=== CleanDisc Player CLI ===");
             
             WindowsDiscService discService = new WindowsDiscService();
+            MusicBrainzService metadataService = new MusicBrainzService();
+            WindowsPlaybackService mediaPlayer = new WindowsPlaybackService();
 
             var disc = discService.GetDiscInfo();
 
@@ -35,11 +41,37 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine($"Duration:  {disc.Duration}");
                 Console.WriteLine($"Tracks:    {disc.TrackCount}");
                 //Console.WriteLine($"TOC ID:    {disc.TOCId}");
+                Console.WriteLine($"Track Lengths:");
+                foreach (var track in disc.Tracks)
+                {
+                    Console.WriteLine($"  {track.Number}. {track.Duration:mm\\:ss}");
+                }
+                Console.WriteLine("");
             }
             //Console.WriteLine("\nPress ENTER to continue...");
             //Console.ReadLine();
 
-            WindowsPlaybackService mediaPlayer = new WindowsPlaybackService();
+            // Look up metadata
+            Console.WriteLine("Looking up album info from MusicBrainz...");
+            var albumInfo = await metadataService.LookupDiscAsync(disc.DiscId);
+
+            if (albumInfo != null)
+            {
+                Console.WriteLine($"\nAlbum: {albumInfo.Title}");
+                Console.WriteLine($"Artist: {albumInfo.Artist}");
+                Console.WriteLine($"Release Date: {albumInfo.ReleaseDate}");
+                Console.WriteLine($"\nTracks:");
+                foreach (var track in albumInfo.Tracks)
+                {
+                    Console.WriteLine($"  {track.Position}. {track.Title} - {track.Artist} ({track.Length:mm\\:ss})");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Album not found in MusicBrainz database.");
+            }
+
+            // Create media player and initialize with disc info
             mediaPlayer.Init(disc.DevicePath, disc.TrackCount);
 
             while (true)
@@ -122,13 +154,13 @@ namespace CleanDiscPlayer.Cli
                             break;
 
                         case "eject":
-                            mediaPlayer.StopPlayback(); // Ensure playback is stopped before ejecting
+                            mediaPlayer.StopPlayback();
                             discService.EjectDisc(disc.DevicePath);
                             // break; //TODO: listen for disc inserted event and reinitialize player instead of exiting application
                             return;
 
                         case "exit":
-                            mediaPlayer.StopPlayback(); // Ensure playback is stopped before exiting
+                            mediaPlayer.StopPlayback();
                             return;
 
                         default:
