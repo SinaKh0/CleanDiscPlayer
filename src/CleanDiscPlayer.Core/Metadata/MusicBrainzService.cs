@@ -54,22 +54,29 @@ namespace CleanDiscPlayer.Core.Metadata
                 Console.WriteLine($"Found {foundDisc.Releases.Count} Release(s).");
 
                 // Get the first release (usually the most relevant)
-                // TODO: Let user choose if multiple releases are found
+                if (foundDisc.Releases.Count > 1)
+                {
+                    // TODO: Implement user selection of release if multiple are found
+                    Console.WriteLine("Multiple releases found for this disc ID. Selecting the first one.");
+                }
                 var release = foundDisc.Releases.First();
 
                 Console.WriteLine($"Selected first release: {release.Title} by {GetArtistName(release.ArtistCredit)}");
 
+                // THIS IS AN UNNECESSARY EXTRA LOOKUP - THE DISC RESPONSE ALREADY INCLUDES THE TRACKS
                 // Fetch full release details with recordings (tracks)
-                var fullRelease = await _query.LookupReleaseAsync(
-                    release.Id,
-                    Include.Recordings | Include.ArtistCredits | Include.DiscIds
-                );
+                //var fullRelease = await _query.LookupReleaseAsync(
+                //    release.Id,
+                //    Include.Recordings | Include.ArtistCredits | Include.DiscIds
+                //);
 
-                return MapToAlbumInfo(fullRelease, discId);
+                //return MapToAlbumInfo(fullRelease, discId);
+                return MapToAlbumInfo(release, discId);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"MusicBrainz lookup failed: {ex.Message}");
+                // TODO: handle SSL errors and other exceptions more gracefully
                 return null;
             }
         }
