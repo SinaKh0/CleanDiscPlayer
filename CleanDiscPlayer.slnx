@@ -14,6 +14,7 @@
     <Platform Solution="*|x86" Project="x86" />
     <Build Solution="*|Any CPU" Project="false" />
   </Project>
+  <Project Path="src/CleanDiscPlayer.Test/CleanDiscPlayer.Test.csproj" Id="c665cfae-b901-4215-8d75-c21e5cfeec23" />
   <Project Path="src/CleanDiscPlayer.WindowsPlayer/CleanDiscPlayer.WindowsPlayer.csproj">
     <Platform Solution="*|x64" Project="x64" />
     <Platform Solution="*|x86" Project="x86" />

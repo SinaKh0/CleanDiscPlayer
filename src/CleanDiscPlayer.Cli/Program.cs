@@ -40,7 +40,7 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine($"Disc ID:   {disc.DiscId}");
                 Console.WriteLine($"Duration:  {disc.Duration}");
                 Console.WriteLine($"Tracks:    {disc.TrackCount}");
-                //Console.WriteLine($"TOC ID:    {disc.TOCId}");
+                Console.WriteLine($"TOC ID:    {disc.TOCId}");
                 Console.WriteLine($"Track Lengths:");
                 foreach (var track in disc.Tracks)
                 {
