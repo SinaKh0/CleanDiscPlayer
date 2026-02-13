@@ -54,12 +54,35 @@ namespace CleanDiscPlayer.Core.Metadata
                 Console.WriteLine($"Found {foundDisc.Releases.Count} Release(s).");
 
                 // Get the first release (usually the most relevant)
+                var release = foundDisc.Releases.First();
+
+
+                // If there are multiple releases, let user select the most appropriate one.
                 if (foundDisc.Releases.Count > 1)
                 {
-                    // TODO: Implement user selection of release if multiple are found
-                    Console.WriteLine("Multiple releases found for this disc ID. Selecting the first one.");
+                    // Display release options to the user
+                    Console.WriteLine($"Multiple releases ({foundDisc.Releases.Count}) found for this disc ID:");
+                    for (int i = 0; i < foundDisc.Releases.Count; i++)
+                    {
+                        var r = foundDisc.Releases[i];
+                        Console.WriteLine($"{i + 1}. {r.Title} by {GetArtistName(r.ArtistCredit)} ({r.Date?.ToString() ?? "Unknown Date"})");
+                    }
+
+                    // Prompt user for selection
+                    Console.Write("Select a release (default - 1): ");
+
+                    var command = Console.ReadLine()?.Trim().ToLower();
+
+                    // validate user input and handle invalid selections
+                    if (int.TryParse(command, out int selectedIndex) && selectedIndex > 0 && selectedIndex <= foundDisc.Releases.Count)
+                    {
+                        release = foundDisc.Releases[selectedIndex - 1];
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid selection. Defaulting to the first release.");
+                    }
                 }
-                var release = foundDisc.Releases.First();
 
                 Console.WriteLine($"Selected first release: {release.Title} by {GetArtistName(release.ArtistCredit)}");
 
