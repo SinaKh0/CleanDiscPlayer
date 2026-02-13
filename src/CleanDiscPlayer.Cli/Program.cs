@@ -58,6 +58,7 @@ namespace CleanDiscPlayer.Cli
             if (albumInfo != null)
             {
                 Console.WriteLine($"\nAlbum: {albumInfo.Title}");
+                Console.WriteLine($"Media Title: {albumInfo.MediumTitle}");
                 Console.WriteLine($"Artist: {albumInfo.Artist}");
                 Console.WriteLine($"Release Date: {albumInfo.ReleaseDate}");
                 Console.WriteLine($"\nTracks:");
