@@ -78,13 +78,17 @@ namespace CleanDiscPlayer.Core.Metadata
                     {
                         release = foundDisc.Releases[selectedIndex - 1];
                     }
+                    else if (string.IsNullOrEmpty(command)) 
+                    {
+                        Console.WriteLine("Defaulting to the first release.");
+                    }
                     else
                     {
                         Console.WriteLine("Invalid selection. Defaulting to the first release.");
                     }
                 }
 
-                Console.WriteLine($"Selected first release: {release.Title} by {GetArtistName(release.ArtistCredit)}");
+                Console.WriteLine($"Selected release: {release.Title} by {GetArtistName(release.ArtistCredit)}");
 
                 // THIS IS AN UNNECESSARY EXTRA LOOKUP - THE DISC RESPONSE ALREADY INCLUDES THE TRACKS
                 // Fetch full release details with recordings (tracks)
