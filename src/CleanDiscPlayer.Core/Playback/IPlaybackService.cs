@@ -25,6 +25,11 @@
         public void PlayFromBeginning();
 
         /// <summary>
+        /// Starts playback from beginning of queue
+        /// </summary>
+        public void PlayFromBeginningOfQueue();
+
+        /// <summary>
         /// Starts playback beginning from the specified track number.
         /// </summary>
         /// <param name="trackNumber">The 1-based index of the track to start playback from. Must be within the range of available tracks.</param>
@@ -106,5 +111,13 @@
         /// </summary>
         /// <param name="enabled">true to enable shuffle mode; false to disable it.</param>
         public void SetShuffleMode(bool enabled);
+
+        /// <summary>
+        /// Shuffles the play queue, randomizing the order of tracks to be played next.
+        /// </summary>
+        /// <remarks>If no track is currently playing, all tracks are included in the shuffled queue. If a
+        /// track is currently playing, only the remaining tracks are shuffled and added to the queue. The play history
+        /// is reset as part of this operation.</remarks>
+        public void ShuffleQueue();
     }
 }

@@ -24,9 +24,9 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         private enum RepeatMode
         {
-            NoRepeat,      // Stop after last track
-            RepeatAll,    // Loop back to first track
-            RepeatTrack    // Repeat current track forever
+            NoRepeat,       // Stop after last track
+            RepeatAll,      // Loop back to first track
+            RepeatTrack     // Repeat current track forever
         }
 
         private const int MinVolume = 0;
@@ -125,7 +125,6 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
                     // print for debugging
                     Console.WriteLine($"Current Track: {_currentTrack}");
                     Console.WriteLine($"Queue refilled from history: {string.Join(", ", _playQueue)}");
-                    Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
                     Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
                 }
                 else
@@ -138,22 +137,47 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         public void PlayFromBeginning()
         {
-            ResetPlayQueueAndHistory();
-            PlayTrack(1);
-            BuildQueueFromTrack(1);
+            PlayFromTrack(1);
+        }
+
+
+        public void PlayFromBeginningOfQueue()
+        {
+            if (_playQueue.Count == 0)
+            {
+                Console.WriteLine("Play queue is empty. Cannot play from beginning of queue.");
+                return;
+            }
+            int nextTrack = _playQueue.Dequeue();
+            PlayTrack(nextTrack);
+
+            Console.WriteLine($"Current Track: {_currentTrack}");
+            Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
+            Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
         }
 
         public void PlayFromTrack(int trackNumber)
         {
-            // TODO:
             // if user selects a track number from queue, we need to jump to it and update the queue and history
             // if user selects a track number not in queue, we need to find it in history and update the queue and history
             // if shuffle mode is enabled, create new shuffle queue from that track
             ResetPlayQueueAndHistory();
             PlayTrack(trackNumber);
-            BuildQueueFromTrack(trackNumber);
+            //BuildQueueFromTrack(trackNumber);
+            if (_shuffleEnabled)
+            {
+                ShuffleQueue();
+            }
+            else
+            {
+                BuildQueueFromTrack(trackNumber);
+            }
         }
 
+        /// <summary>
+        /// Build a new queue
+        /// </summary>
+        /// <param name="trackNumber"></param>
         private void BuildQueueFromTrack(int trackNumber)
         {
             _playQueue = new Queue<int>(Enumerable.Range(trackNumber + 1, _trackCount - trackNumber));
@@ -164,6 +188,10 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
         }
 
+        /// <summary>
+        /// Play the track in the media player
+        /// </summary>
+        /// <param name="trackNumber"></param>
         private void PlayTrack(int trackNumber)
         {
             if (!IsValidTrack(trackNumber, out string error))
@@ -305,10 +333,31 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             return _trackCount;
         }
 
-        public Queue<int> ShuffleQueue()
+        public void ShuffleQueue()
         {
-            // TODO: take whole tracklist and shuffle, if there is a _currentTrack, put it the rest of the tracks in a queue and play from there
-            throw new NotImplementedException();
+            ResetPlayQueueAndHistory();
+            
+            if (_currentTrack == 0)
+            {
+                // if no track is currently playing, shuffle entire tracklist
+                var allTracks = Enumerable.Range(1, _trackCount).ToList();
+                var shuffled = allTracks.OrderBy(x => Guid.NewGuid()).ToList();
+                _playQueue = new Queue<int>(shuffled);
+            }
+            else
+            {
+                // if a track is currently playing, shuffle all the other tracks and put them in the queue
+                var remainingTracks = Enumerable.Range(1, _trackCount)
+                    .Where(t => t != _currentTrack)
+                    .ToList();
+                var shuffled = remainingTracks.OrderBy(x => Guid.NewGuid()).ToList();
+                _playQueue = new Queue<int>(shuffled);
+            }
+
+            
+            Console.WriteLine($"Current Track: {_currentTrack}");
+            Console.WriteLine($"Shuffle Enabled. Queue shuffled: {string.Join(", ", _playQueue)}");
+            Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
         }
 
         public void LogCurrentState()
@@ -362,11 +411,6 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             if (enabled)
             {
                 ShuffleQueue();
-                // TODO: if no track is playing, start playing from shuffle queue?
-                if (_mediaPlayer?.State != VLCState.Playing)
-                {
-                    
-                }
             }
             else
             {

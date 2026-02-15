@@ -81,19 +81,22 @@ namespace CleanDiscPlayer.Cli
                 //Console.Clear();
                 Console.WriteLine("\n=== CleanDisc Player CLI ===");
                 Console.WriteLine("Commands:");
-                Console.WriteLine("  play       - Start playback");
-                Console.WriteLine("  play #     - Play specified track number");
-                Console.WriteLine("  pause      - Resume playback");
-                Console.WriteLine("  resume     - Skip to next track");
-                Console.WriteLine("  prev       - Skip to previous track");
-                Console.WriteLine("  next       - Skip to next track");
-                Console.WriteLine("  seek t     - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
-                Console.WriteLine("  repeat m   - Set repeat mode (0: no repeat, 1: repeat all, 2: repeat track)");
-                Console.WriteLine("  volume     - Adjust volume of player (0-100%)");
-                Console.WriteLine("  stop       - Stop playback");
-                Console.WriteLine("  eject      - Eject disc and exit application");
-                Console.WriteLine("  exit       - Exit application");
-                Console.WriteLine("  log        - Provides some info on status of player");
+                Console.WriteLine("  play        - Start playback from first track");
+                Console.WriteLine("  play #      - Play specified track number");
+                Console.WriteLine("  shuffleplay - Play in shuffle mode from random track");
+                Console.WriteLine("  pause       - Resume playback");
+                Console.WriteLine("  resume      - Skip to next track");
+                Console.WriteLine("  prev        - Skip to previous track");
+                Console.WriteLine("  next        - Skip to next track");
+                Console.WriteLine("  seek t      - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
+                Console.WriteLine("  repeat m    - Set repeat mode (0: no repeat, 1: repeat all, 2: repeat track)");
+                Console.WriteLine("  shuffle m   - Toggle shuffle mode (0: off, 1: on)");
+                Console.WriteLine("  tracklist   - Show track listing and metadata");
+                Console.WriteLine("  volume      - Adjust volume of player (0-100%)");
+                Console.WriteLine("  stop        - Stop playback");
+                Console.WriteLine("  eject       - Eject disc and exit application");
+                Console.WriteLine("  exit        - Exit application");
+                Console.WriteLine("  log         - Provides some info on status of player");
                 Console.Write("Enter command: ");
 
                 var command = Console.ReadLine()?.Trim().ToLower();
@@ -109,7 +112,7 @@ namespace CleanDiscPlayer.Cli
                 }
                 else if (command.StartsWith("seek "))
                 {
-                    string seekTimeStr = command.Split(' ')[1]; //command.Substring(5).Trim(); // Get the part after "seek "
+                    string seekTimeStr = command.Split(' ')[1]; // Get the part after "seek "
                     mediaPlayer.SeekTo(seekTimeStr);
                 }
                 else if (command.StartsWith("repeat "))
@@ -126,6 +129,20 @@ namespace CleanDiscPlayer.Cli
                         Console.ReadLine();
                     }
                 }
+                else if (command.StartsWith("shuffle "))
+                {
+                    string shuffleStr = command.Split(' ')[1];
+                    if (int.TryParse(shuffleStr, out int shuffleNumber))
+                    {
+                        mediaPlayer.SetShuffleMode(shuffleNumber == 1);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid shuffle mode. Use 0 for off or 1 for on.");
+                        Console.WriteLine("Press ENTER to continue...");
+                        Console.ReadLine();
+                    }
+                }
                 else
                 {
                     switch (command)
@@ -138,6 +155,11 @@ namespace CleanDiscPlayer.Cli
                             mediaPlayer.PlayFromBeginning();
                             break;
 
+                        case "shuffleplay":
+                            mediaPlayer.SetShuffleMode(true);
+                            mediaPlayer.PlayFromBeginningOfQueue();
+                            break;
+
                         case "resume":
                             mediaPlayer.ResumePlayback();
                             break;
@@ -148,10 +170,6 @@ namespace CleanDiscPlayer.Cli
 
                         case "prev":
                             mediaPlayer.SkipToPreviousTrack();
-                            break;
-
-                        case "repeat":
-                            // TODO: Implement repeat logic (3 modes: no repeat, repeat disc, repeat track)
                             break;
 
                         case "shuffle":
@@ -167,7 +185,11 @@ namespace CleanDiscPlayer.Cli
                             break;
 
                         case "tracklist":
-                            // TODO: Implement track listing logic here
+                            Console.WriteLine($"Tracks:");
+                            foreach (var track in albumInfo.Tracks)
+                            {
+                                Console.WriteLine($"  {track.Position}. {track.Title} - {track.Artist} ({track.Length:mm\\:ss})");
+                            }
                             break;
 
                         case "eject":
