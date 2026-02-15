@@ -255,19 +255,26 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         public void SkipToPreviousTrack()
         {
-            if (_playHistory.Count == 0)
+            // If more than 5 seconds have elapsed in the current track, restart it.
+            // Otherwise, go back to previous track in history if there is one. If there is no previous track in history, just restart current track.
+            if ((_mediaPlayer?.State != VLCState.NothingSpecial && _mediaPlayer?.State != VLCState.Ended && _mediaPlayer?.State != VLCState.Stopped) && (_mediaPlayer?.Time) < 5000)
             {
-                Console.WriteLine("No previous track in history.");
-                return;
+                if (_playHistory.Count == 0)
+                {
+                    Console.WriteLine("No previous track in history.");
+                    PlayTrack(_currentTrack);
+                    return;
+                }
+
+                _playQueue = new Queue<int>(new[] { _currentTrack }.Concat(_playQueue));
+                int previousTrack = _playHistory.Pop();
+                PlayTrack(previousTrack);
             }
-
-            // TODO: change this to restart current track if more than 5 seconds have elapsed instead of always going to previous track
-
-            // If going back to previous track, we should add current track back to the front of the queue so it can be played again if user goes forward
-            _playQueue = new Queue<int>(new[] { _currentTrack }.Concat(_playQueue));
-
-            int previousTrack = _playHistory.Pop();
-            PlayTrack(previousTrack);
+            else
+            {
+                // replay current track and don't update play history or queue 
+                PlayTrack(_currentTrack);
+            }
 
             Console.WriteLine($"Current Track: {_currentTrack}");
             Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
