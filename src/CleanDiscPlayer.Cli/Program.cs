@@ -31,6 +31,7 @@ namespace CleanDiscPlayer.Cli
 
             if (disc == null)
             {
+                //TODO: listen for disc inserted event and reinitialize player instead of exiting application
                 Console.WriteLine("No disc found, exiting.");
                 return;
             }
@@ -80,18 +81,19 @@ namespace CleanDiscPlayer.Cli
                 //Console.Clear();
                 Console.WriteLine("\n=== CleanDisc Player CLI ===");
                 Console.WriteLine("Commands:");
-                Console.WriteLine("  play   - Start playback");
-                Console.WriteLine("  play # - Play specified track number");
-                Console.WriteLine("  pause  - Resume playback");
-                Console.WriteLine("  resume - Skip to next track");
-                Console.WriteLine("  prev   - Skip to previous track");
-                Console.WriteLine("  next   - Skip to next track");
-                Console.WriteLine("  seek t - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
-                Console.WriteLine("  volume - Adjust volume of player (0-100%)");
-                Console.WriteLine("  stop   - Stop playback");
-                Console.WriteLine("  eject  - Eject disc and exit application");
-                Console.WriteLine("  exit   - Exit application");
-                Console.WriteLine("  log    - Provides some info on status of player");
+                Console.WriteLine("  play       - Start playback");
+                Console.WriteLine("  play #     - Play specified track number");
+                Console.WriteLine("  pause      - Resume playback");
+                Console.WriteLine("  resume     - Skip to next track");
+                Console.WriteLine("  prev       - Skip to previous track");
+                Console.WriteLine("  next       - Skip to next track");
+                Console.WriteLine("  seek t     - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
+                Console.WriteLine("  repeat m   - Set repeat mode (0: no repeat, 1: repeat all, 2: repeat track)");
+                Console.WriteLine("  volume     - Adjust volume of player (0-100%)");
+                Console.WriteLine("  stop       - Stop playback");
+                Console.WriteLine("  eject      - Eject disc and exit application");
+                Console.WriteLine("  exit       - Exit application");
+                Console.WriteLine("  log        - Provides some info on status of player");
                 Console.Write("Enter command: ");
 
                 var command = Console.ReadLine()?.Trim().ToLower();
@@ -99,7 +101,7 @@ namespace CleanDiscPlayer.Cli
                 // Handle "play #" before the switch
                 if (command.StartsWith("play ") && int.TryParse(command.Split(' ')[1], out int trackNumber))
                 {
-                    mediaPlayer.PlayTrack(trackNumber);
+                    mediaPlayer.PlayFromTrack(trackNumber);
                 }
                 else if (command.StartsWith("volume ") && int.TryParse(command.Split(' ')[1], out int volumeNumber))
                 {
@@ -109,6 +111,20 @@ namespace CleanDiscPlayer.Cli
                 {
                     string seekTimeStr = command.Split(' ')[1]; //command.Substring(5).Trim(); // Get the part after "seek "
                     mediaPlayer.SeekTo(seekTimeStr);
+                }
+                else if (command.StartsWith("repeat "))
+                {
+                    string modeStr = command.Split(' ')[1];
+                    if (int.TryParse(modeStr, out int modeNumber))
+                    {
+                        mediaPlayer.SetRepeatMode(modeNumber);
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid repeat mode. Use 0 for no repeat, 1 for repeat all, or 2 for repeat track.");
+                        Console.WriteLine("Press ENTER to continue...");
+                        Console.ReadLine();
+                    }
                 }
                 else
                 {

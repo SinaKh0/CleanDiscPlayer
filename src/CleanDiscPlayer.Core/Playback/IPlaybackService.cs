@@ -13,16 +13,22 @@
         /// <param name="trackCount"></param>
         public void Init(string drivePath, int trackCount);
 
-        /// <summary>
-        /// Plays the audio track at the specified track number.
-        /// </summary>
-        /// <param name="trackNumber">The one-based index of the track to play. Must be within the range of available tracks.</param>
-        public void PlayTrack(int trackNumber);
+        ///// <summary>
+        ///// Plays the audio track at the specified track number.
+        ///// </summary>
+        ///// <param name="trackNumber">The one-based index of the track to play. Must be within the range of available tracks.</param>
+        //public void PlayTrack(int trackNumber);
 
         /// <summary>
         /// Starts playback from the beginning of the cd.
         /// </summary>
         public void PlayFromBeginning();
+
+        /// <summary>
+        /// Starts playback beginning from the specified track number.
+        /// </summary>
+        /// <param name="trackNumber">The 1-based index of the track to start playback from. Must be within the range of available tracks.</param>
+        public void PlayFromTrack(int trackNumber);
 
         /// <summary>
         /// Pauses the current playback if it is in progress.
@@ -93,12 +99,12 @@
         /// Sets the repeat mode for playback.
         /// </summary>
         /// <param name="mode">An integer value that specifies the repeat mode to apply (3 modes: no repeat, repeat disc, repeat track).</param>
-        public void RepeatMode(int mode);
+        public void SetRepeatMode(int mode);
 
         /// <summary>
         /// Enables or disables shuffle mode for playback.
         /// </summary>
         /// <param name="enabled">true to enable shuffle mode; false to disable it.</param>
-        public void ShuffleMode(bool enabled);
+        public void SetShuffleMode(bool enabled);
     }
 }

@@ -9,8 +9,25 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
         private LibVLC _libVlc;
         private MediaPlayer _mediaPlayer;
         private string _currentDrive;
-        private int _currentTrack = 1;
+        private int _currentTrack = 0;
         private int _trackCount = 0;
+
+        // Playback state
+        private RepeatMode _repeatMode = RepeatMode.NoRepeat;
+        private bool _shuffleEnabled = false;
+
+        // Queue: remaining tracks to play this cycle
+        private Queue<int> _playQueue = new Queue<int>();
+
+        // History: tracks we've already played (for previous button)
+        private Stack<int> _playHistory = new Stack<int>();
+
+        private enum RepeatMode
+        {
+            NoRepeat,      // Stop after last track
+            RepeatAll,    // Loop back to first track
+            RepeatTrack    // Repeat current track forever
+        }
 
         private const int MinVolume = 0;
         private const int MaxVolume = 100;
@@ -23,6 +40,9 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             _initialized = true;
             _currentDrive = driveLetter.TrimEnd('\\').TrimEnd('/');
             _trackCount = trackCount;
+
+            ResetPlayQueueAndHistory();
+            // TODO: initialize repeat mode and shuffle mode based on user settings???
 
             LibVLCSharp.Shared.Core.Initialize();
 
@@ -42,29 +62,109 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
         }
 
         /// <summary>
+        /// Clears the play queue and play history, resetting both to an empty state.
+        /// </summary>
+        /// <remarks>Call this method to remove all items from the play queue and history, typically when
+        /// starting a new playback session or resetting the player state.</remarks>
+        private void ResetPlayQueueAndHistory()
+        {
+            _playQueue.Clear();
+            _playHistory.Clear();
+        }
+
+        /// <summary>
         /// Called automatically when the current track ends.
         /// </summary>
         private void AdvanceTrack()
         {
-            if (_currentTrack < _trackCount)
+            if (_repeatMode == RepeatMode.RepeatTrack)
             {
-                PlayTrack(_currentTrack + 1);
-                Console.Write("Enter command: ");
+                // replay current track and don't update play history or queue 
+                PlayTrack(_currentTrack);
+
+                Console.WriteLine($"Current Track: {_currentTrack}");
+                Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
+                Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
             }
             else
             {
-                Console.WriteLine("\nEnd of disc.");
-                this.StopPlayback();
-                Console.Write("Enter command: ");
+                PlayNextTrack();
+            }
+            Console.Write("Enter command: ");
+        }
+
+        /// <summary>
+        /// Advances playback to the next track in the queue, handling repeat and playback completion according to the
+        /// current repeat mode.
+        /// </summary>
+        /// <remarks>If the play queue is empty and the repeat mode is set to repeat all, the queue is
+        /// refilled from the play history and playback continues from the beginning. Otherwise, playback is stopped
+        /// when the end of the queue is reached.</remarks>
+        private void PlayNextTrack()
+        {
+            if (_playQueue.Count > 0)
+            {
+                int nextTrack = _playQueue.Dequeue();
+                _playHistory.Push(_currentTrack);
+                PlayTrack(nextTrack);
+
+                Console.WriteLine($"Current Track: {_currentTrack}");
+                Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
+                Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
+            }
+            else if (_playQueue.Count == 0)
+            {
+                if (_repeatMode == RepeatMode.RepeatAll)
+                {
+                    // reverse history to get correct order in queue and include current track
+                    _playQueue = new Queue<int>(_playHistory.Reverse());
+                    _playQueue.Enqueue(_currentTrack);
+                    _playHistory.Clear();
+                    PlayTrack(_playQueue.Dequeue());
+
+                    // print for debugging
+                    Console.WriteLine($"Current Track: {_currentTrack}");
+                    Console.WriteLine($"Queue refilled from history: {string.Join(", ", _playQueue)}");
+                    Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
+                    Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
+                }
+                else
+                {
+                    Console.WriteLine("\nEnd of Queue, Stopping Playback.");
+                    StopPlayback();
+                }
             }
         }
 
         public void PlayFromBeginning()
         {
+            ResetPlayQueueAndHistory();
             PlayTrack(1);
+            BuildQueueFromTrack(1);
         }
 
-        public void PlayTrack(int trackNumber)
+        public void PlayFromTrack(int trackNumber)
+        {
+            // TODO:
+            // if user selects a track number from queue, we need to jump to it and update the queue and history
+            // if user selects a track number not in queue, we need to find it in history and update the queue and history
+            // if shuffle mode is enabled, create new shuffle queue from that track
+            ResetPlayQueueAndHistory();
+            PlayTrack(trackNumber);
+            BuildQueueFromTrack(trackNumber);
+        }
+
+        private void BuildQueueFromTrack(int trackNumber)
+        {
+            _playQueue = new Queue<int>(Enumerable.Range(trackNumber + 1, _trackCount - trackNumber));
+            _playHistory = new Stack<int>(Enumerable.Range(1, trackNumber - 1));
+
+            Console.WriteLine($"Current Track: {_currentTrack}");
+            Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
+            Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
+        }
+
+        private void PlayTrack(int trackNumber)
         {
             if (!IsValidTrack(trackNumber, out string error))
             {
@@ -75,11 +175,22 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             var mediaPath = $"cdda:///{_currentDrive}";
             var media = new Media(_libVlc, mediaPath, FromType.FromLocation);
             media.AddOption($":cdda-track={trackNumber}");
+
             _currentTrack = trackNumber;
             _mediaPlayer.Play(media);
+
             Console.WriteLine($"\nPlaying track {_currentTrack} of {_trackCount}");
         }
 
+        /// <summary>
+        /// Determines whether the specified track number is valid for the current disc and provides an error message if
+        /// it is not.
+        /// </summary>
+        /// <param name="trackNumber">The track number to validate. Must be greater than or equal to 1 and less than or equal to the total number
+        /// of tracks on the disc.</param>
+        /// <param name="errorMessage">When the method returns <see langword="false"/>, contains a message describing why the track number is
+        /// invalid; otherwise, <see langword="null"/>.</param>
+        /// <returns><see langword="true"/> if the track number is valid; otherwise, <see langword="false"/>.</returns>
         private bool IsValidTrack(int trackNumber, out string errorMessage)
         {
             if (trackNumber < 1)
@@ -111,31 +222,34 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         public void SkipToNextTrack()
         {
-            if (_currentTrack >= _trackCount)
-            {
-                Console.WriteLine("Already on last track.");
-                return;
-            }
-            PlayTrack(++_currentTrack);
-            Console.WriteLine($"Track {_currentTrack} of {_trackCount}");
+            PlayNextTrack();
         }
 
         public void SkipToPreviousTrack()
         {
-            if (_currentTrack <= 1)
+            if (_playHistory.Count == 0)
             {
-                // TODO: change this to restart current track instead of doing nothing
-                // if on shuffle mode, change this to go to previously played track instead of previous track in tracklist
-                Console.WriteLine("Already on first track.");
+                Console.WriteLine("No previous track in history.");
                 return;
             }
+
             // TODO: change this to restart current track if more than 5 seconds have elapsed instead of always going to previous track
-            PlayTrack(--_currentTrack);
-            Console.WriteLine($"Track {_currentTrack} of {_trackCount}");
+
+            // If going back to previous track, we should add current track back to the front of the queue so it can be played again if user goes forward
+            _playQueue = new Queue<int>(new[] { _currentTrack }.Concat(_playQueue));
+
+            int previousTrack = _playHistory.Pop();
+            PlayTrack(previousTrack);
+
+            Console.WriteLine($"Current Track: {_currentTrack}");
+            Console.WriteLine($"Queue: {string.Join(", ", _playQueue)}");
+            Console.WriteLine($"History: {string.Join(", ", _playHistory)}");
         }
 
         public void StopPlayback()
         {
+            ResetPlayQueueAndHistory();
+            _currentTrack = 0;
             _mediaPlayer?.Stop();
             Console.WriteLine("Playback stopped.");
         }
@@ -191,6 +305,12 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             return _trackCount;
         }
 
+        public Queue<int> ShuffleQueue()
+        {
+            // TODO: take whole tracklist and shuffle, if there is a _currentTrack, put it the rest of the tracks in a queue and play from there
+            throw new NotImplementedException();
+        }
+
         public void LogCurrentState()
         {
             Console.WriteLine($"\nCurrent Track: {_currentTrack}");
@@ -209,16 +329,58 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         }
 
-        public void RepeatMode(int mode)
+        public void SetRepeatMode(int mode)
         {
-            // TODO: implement repeat mode (3 modes: no repeat, repeat disc, repeat track)
-            throw new NotImplementedException();
+            // implement repeat mode (3 modes: no repeat, repeat disc, repeat track)
+            // TODO: clean this up by using an enum for repeat mode instead of int and removing the if statements
+            if (mode < 0 || mode > 2)
+            {
+                Console.WriteLine("Invalid repeat mode. Valid modes are: 0 (no repeat), 1 (repeat disc), 2 (repeat track).");
+                return;
+            }
+            else if (mode == 0)
+            {
+                _repeatMode = RepeatMode.NoRepeat;
+                Console.WriteLine("Repeat Mode set to No Repeat.");
+            }
+            else if (mode == 1)
+            {
+                _repeatMode = RepeatMode.RepeatAll;
+                Console.WriteLine("Repeat Mode set to Repeat All.");
+
+            }
+            else if (mode == 2)
+            {
+                _repeatMode = RepeatMode.RepeatTrack;
+                Console.WriteLine("Repeat Mode set to Repeat Track.");
+            }
         }
 
-        public void ShuffleMode(bool enabled)
+        public void SetShuffleMode(bool enabled)
         {
-            // TODO: implement shuffle mode
-            throw new NotImplementedException();
+            _shuffleEnabled = enabled;
+            if (enabled)
+            {
+                ShuffleQueue();
+                // TODO: if no track is playing, start playing from shuffle queue?
+                if (_mediaPlayer?.State != VLCState.Playing)
+                {
+                    
+                }
+            }
+            else
+            {
+                ClearShuffleQueue();
+            }
+        }
+
+        /// <summary>
+        /// Removes all items from the shuffle queue and rebuilds a normal queue.
+        /// </summary>
+        private void ClearShuffleQueue()
+        {
+            ResetPlayQueueAndHistory();
+            BuildQueueFromTrack(_currentTrack);
         }
     }
 }
