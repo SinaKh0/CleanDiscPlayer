@@ -1,4 +1,5 @@
-﻿using MetaBrainz.MusicBrainz;
+﻿using MetaBrainz.Common;
+using MetaBrainz.MusicBrainz;
 using MetaBrainz.MusicBrainz.Interfaces.Entities;
 using System.Net.Http.Headers;
 using System.Text.Json;
@@ -11,6 +12,7 @@ namespace CleanDiscPlayer.Core.Metadata
     public class MusicBrainzService : IMusicBrainzService
     {
         private readonly Query _query;
+        private RateLimitInfo? _lastRateLimitInfo;
 
         public MusicBrainzService()
         {
@@ -18,7 +20,7 @@ namespace CleanDiscPlayer.Core.Metadata
             _query = new Query("CleanDiscPlayer", new Version(1, 0), "https://github.com/SinaKh0/CleanDiscPlayer");
         }
 
-        public async Task<AlbumInfo?> LookupDiscAsync(string discId)
+        public async Task<LookupResult> LookupDiscAsync(string discId)
         {
             try
             {
@@ -27,6 +29,22 @@ namespace CleanDiscPlayer.Core.Metadata
                 // https://musicbrainz.org/ws/2/discid/pcgmzmDWsctNXPLxoQsXadhvaLA-
                 // https://musicbrainz.org/cdtoc/x92mQ8poBkpI5gLY9PyPa.935Oo-
                 // https://musicbrainz.org/ws/2/discid/x92mQ8poBkpI5gLY9PyPa.935Oo-
+
+
+                // Check if we should wait before making the request
+                if (_lastRateLimitInfo.HasValue)
+                {
+                    var info = _lastRateLimitInfo.Value;
+                    if (info.RemainingRequests.HasValue && info.RemainingRequests.Value == 0)
+                    {
+                        if (info.ResetIn.HasValue)
+                        {
+                            Console.WriteLine($"Rate limit reached. Waiting {info.ResetIn.Value} seconds...");
+                            await Task.Delay(TimeSpan.FromSeconds(info.ResetIn.Value + 1));
+                        }
+                    }
+                }
+
                 // Look up the disc by its ID
                 var disc = await _query.LookupDiscIdAsync(
                     discId,
@@ -48,7 +66,10 @@ namespace CleanDiscPlayer.Core.Metadata
 
                 if (foundDisc?.Releases == null || !foundDisc.Releases.Any())
                 {
-                    return null; // Disc not found in MusicBrainz
+                    return LookupResult.Fail(
+                        "This disc was not found in the MusicBrainz database.",
+                        LookupErrorType.NotFound
+                    );
                 }
 
                 Console.WriteLine($"Found {foundDisc.Releases.Count} Release(s).");
@@ -97,14 +118,105 @@ namespace CleanDiscPlayer.Core.Metadata
                 //    Include.Recordings | Include.ArtistCredits | Include.DiscIds
                 //);
 
-                //return MapToAlbumInfo(fullRelease, discId);
-                return MapToAlbumInfo(release, discId);
+                var albumInfo = MapToAlbumInfo(release, discId);
+                return LookupResult.Ok(albumInfo);
+            }
+            catch (HttpRequestException ex) when (ex.InnerException is System.Security.Authentication.AuthenticationException)
+            {
+                return LookupResult.Fail(
+                    "SSL connection failed. Please check your system certificates and internet connection.",
+                    LookupErrorType.SslError
+                );
+            }
+            catch (HttpRequestException ex) when (
+                ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
+                ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                return LookupResult.Fail(
+                    "MusicBrainz rate limit exceeded. Please wait a moment and try again.",
+                    LookupErrorType.RateLimited
+                );
+            }
+            catch (HttpError ex) when (ex.Status == System.Net.HttpStatusCode.ServiceUnavailable)
+            {
+                // 503 - Rate limiting
+                // The HttpError object has all the response details
+                Console.WriteLine("=== RATE LIMIT HIT ===");
+                Console.WriteLine($"Status: {ex.Status}");
+                Console.WriteLine($"Reason: {ex.Reason}");
+                Console.WriteLine($"Content: {ex.Content}");
+
+                if (ex.ResponseHeaders != null)
+                {
+                    var info = new RateLimitInfo(ex.ResponseHeaders);
+                    Console.WriteLine($"Allowed: {info.AllowedRequests}");
+                    Console.WriteLine($"Remaining: {info.RemainingRequests}");
+                    Console.WriteLine($"Reset In: {info.ResetIn} seconds");
+                    Console.WriteLine($"Reset At: {info.ResetAt}");
+                }
+                Console.WriteLine("======================");
+
+                // Extract rate limit info from error response headers if available
+                if (ex.ResponseHeaders != null)
+                {
+                    var rateLimitInfo = new RateLimitInfo(ex.ResponseHeaders);
+
+                    var message = "Rate limit exceeded.";
+                    if (rateLimitInfo.ResetIn.HasValue)
+                    {
+                        message += $" Try again in {rateLimitInfo.ResetIn.Value} seconds.";
+                    }
+                    else if (rateLimitInfo.ResetAt.HasValue)
+                    {
+                        message += $" Try again after {rateLimitInfo.ResetAt.Value:HH:mm:ss}.";
+                    }
+
+                    return LookupResult.Fail(message, LookupErrorType.RateLimited);
+                }
+
+                return LookupResult.Fail(
+                    "Rate limit exceeded. Please wait before trying again.",
+                    LookupErrorType.RateLimited
+                );
+            }
+            catch (HttpError ex) when (ex.Status == System.Net.HttpStatusCode.NotFound)
+            {
+                return LookupResult.Fail(
+                    "Disc ID not found in MusicBrainz database.",
+                    LookupErrorType.NotFound
+                );
+            }
+            catch (HttpError ex)
+            {
+                // All other HTTP errors
+                var message = $"HTTP {(int)ex.Status} ({ex.Status})";
+                if (ex.Reason != null)
+                    message += $": {ex.Reason}";
+                if (ex.Content != null)
+                    message += $"\n{ex.Content}";
+
+                return LookupResult.Fail(message, LookupErrorType.NetworkError);
+            }
+            catch (TaskCanceledException)
+            {
+                return LookupResult.Fail(
+                    "Request timed out. Please check your internet connection.",
+                    LookupErrorType.Timeout
+                );
+            }
+            catch (HttpRequestException ex)
+            {
+                return LookupResult.Fail(
+                    $"Network error: {ex.Message}",
+                    LookupErrorType.NetworkError
+                );
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"MusicBrainz lookup failed: {ex.Message}");
-                // TODO: handle SSL errors and other exceptions more gracefully
-                return null;
+                return LookupResult.Fail(
+                    $"Unexpected error: {ex.Message}",
+                    LookupErrorType.Unknown
+                );
             }
         }
 
@@ -137,11 +249,6 @@ namespace CleanDiscPlayer.Core.Metadata
                 if (currentMedium.Tracks != null)
                 {
                     Console.WriteLine($"Medium {mediumIndex + 1}. {currentMedium.Title}. \n    With {currentMedium.TrackCount} track(s) and disc id: {currentMedium.Discs?.FirstOrDefault()?.Id}.");
-
-                    // DEBUG: See raw media object
-                    //var discJson = JsonSerializer.Serialize(medium, new JsonSerializerOptions { WriteIndented = true });
-                    //Console.WriteLine("=== RAW DISC RESPONSE ===");
-                    //Console.WriteLine(discJson);
 
                     if (currentMedium.Discs != null && currentMedium.Discs.Any(d => d.Id.ToString() == discId))
                     {

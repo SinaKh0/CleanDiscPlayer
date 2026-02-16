@@ -9,7 +9,7 @@
         /// Looks up album and track information for a given disc ID.
         /// </summary>
         /// <param name="discId">The MusicBrainz disc ID (28-character string).</param>
-        /// <returns>Album information including tracks, or null if not found.</returns>
-        Task<AlbumInfo?> LookupDiscAsync(string discId);
+        /// <returns>Lookup Result that can either be the album information including tracks, or error details.</returns>
+        Task<LookupResult> LookupDiscAsync(string discId);
     }
 }

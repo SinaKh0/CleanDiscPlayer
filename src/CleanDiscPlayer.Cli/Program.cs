@@ -54,10 +54,11 @@ namespace CleanDiscPlayer.Cli
 
             // Look up metadata
             Console.WriteLine("Looking up album info from MusicBrainz...");
-            var albumInfo = await metadataService.LookupDiscAsync(disc.DiscId);
+            var result = await metadataService.LookupDiscAsync(disc.DiscId);
 
-            if (albumInfo != null)
+            if (result.Success)
             {
+                var albumInfo = result.Album!;
                 Console.WriteLine($"\nAlbum: {albumInfo.Title}");
                 Console.WriteLine($"Media Title: {albumInfo.MediumTitle}");
                 Console.WriteLine($"Artist: {albumInfo.Artist}");
@@ -70,7 +71,21 @@ namespace CleanDiscPlayer.Cli
             }
             else
             {
-                Console.WriteLine("Album not found in MusicBrainz database.");
+                Console.WriteLine($"Lookup failed: {result.ErrorMessage}");
+
+                switch (result.ErrorType)
+                {
+                    case LookupErrorType.NotFound:
+                        Console.WriteLine("Album not found in MusicBrainz database.");
+                        Console.WriteLine($"You can submit this disc at: {disc.TOCId}");
+                        break;
+                    case LookupErrorType.RateLimited:
+                        Console.WriteLine("Tip: Wait at least 1 second between requests.");
+                        break;
+                    case LookupErrorType.SslError:
+                        Console.WriteLine("Try: Check your system date/time.");
+                        break;
+                }
             }
 
             // Create media player and initialize with disc info
@@ -173,7 +188,7 @@ namespace CleanDiscPlayer.Cli
                             break;
 
                         case "shuffle":
-                            // TODO: Implement shuffle logic
+                            mediaPlayer.ShuffleQueue();
                             break;
 
                         case "pause":
@@ -186,7 +201,7 @@ namespace CleanDiscPlayer.Cli
 
                         case "tracklist":
                             Console.WriteLine($"Tracks:");
-                            foreach (var track in albumInfo.Tracks)
+                            foreach (var track in result.Album?.Tracks)
                             {
                                 Console.WriteLine($"  {track.Position}. {track.Title} - {track.Artist} ({track.Length:mm\\:ss})");
                             }
