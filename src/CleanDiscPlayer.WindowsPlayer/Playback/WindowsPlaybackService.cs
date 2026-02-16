@@ -44,6 +44,7 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             ResetPlayQueueAndHistory();
             // TODO: initialize repeat mode and shuffle mode based on user settings???
 
+            // TODO: why does this only sometimes fail???
             LibVLCSharp.Shared.Core.Initialize();
 
             // Verbose logging for debugging

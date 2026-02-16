@@ -120,6 +120,7 @@ namespace CleanDiscPlayer.Cli
                 if (command.StartsWith("play ") && int.TryParse(command.Split(' ')[1], out int trackNumber))
                 {
                     mediaPlayer.PlayFromTrack(trackNumber);
+                    LogTrackInfo(mediaPlayer, result);
                 }
                 else if (command.StartsWith("volume ") && int.TryParse(command.Split(' ')[1], out int volumeNumber))
                 {
@@ -160,34 +161,42 @@ namespace CleanDiscPlayer.Cli
                 }
                 else
                 {
+                    
                     switch (command)
                     {
                         case "log":
+                            LogTrackInfo(mediaPlayer, result);
                             mediaPlayer.LogCurrentState();
                             break;
 
                         case "play":
                             mediaPlayer.PlayFromBeginning();
+                            LogTrackInfo(mediaPlayer, result);
                             break;
 
                         case "shuffleplay":
                             mediaPlayer.SetShuffleMode(true);
                             mediaPlayer.PlayFromBeginningOfQueue();
+                            LogTrackInfo(mediaPlayer, result);
                             break;
 
                         case "resume":
                             mediaPlayer.ResumePlayback();
+                            LogTrackInfo(mediaPlayer, result);
                             break;
 
                         case "next":
                             mediaPlayer.SkipToNextTrack();
+                            LogTrackInfo(mediaPlayer, result);
                             break;
 
                         case "prev":
                             mediaPlayer.SkipToPreviousTrack();
+                            LogTrackInfo(mediaPlayer, result);
                             break;
 
                         case "shuffle":
+                            mediaPlayer.SetShuffleMode(true);
                             mediaPlayer.ShuffleQueue();
                             break;
 
@@ -225,6 +234,17 @@ namespace CleanDiscPlayer.Cli
                     }
                 }
             }
+        }
+
+        private static void LogTrackInfo(WindowsPlaybackService mediaPlayer, LookupResult result)
+        {
+            int curr = mediaPlayer.CurrentTrack();
+            if (curr < 0 || curr >= result.Album?.Tracks.Count)
+            {
+                Console.WriteLine("Currently Playing Track: Unknown");
+                return;
+            }
+            Console.WriteLine($"Currently Playing Track: {curr}. {result.Album?.Tracks[curr].Title} - {result.Album?.Tracks[curr].Artist} ({result.Album?.Tracks[curr].Length:mm\\:ss})");
         }
     }
 }
