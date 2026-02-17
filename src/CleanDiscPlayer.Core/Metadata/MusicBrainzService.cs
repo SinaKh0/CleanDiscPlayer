@@ -1,6 +1,7 @@
 ﻿using MetaBrainz.Common;
 using MetaBrainz.MusicBrainz;
 using MetaBrainz.MusicBrainz.Interfaces.Entities;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
 using System.Text.Json;
 
@@ -12,15 +13,25 @@ namespace CleanDiscPlayer.Core.Metadata
     public class MusicBrainzService : IMusicBrainzService
     {
         private readonly Query _query;
+        private readonly ILogger<MusicBrainzService> _logger;
         private RateLimitInfo? _lastRateLimitInfo;
 
-        public MusicBrainzService()
+        /// <summary>
+        /// Initializes a new instance of MusicBrainzService.
+        /// </summary>
+        /// <param name="logger">Logger for diagnostic and error information.</param>
+        public MusicBrainzService(ILogger<MusicBrainzService> logger)
         {
             // Provide user-agent
-            _query = new Query("CleanDiscPlayer", new Version(1, 0), "https://github.com/SinaKh0/CleanDiscPlayer");
+            _logger = logger;
+            _query = new Query("CleanDiscPlayer", new Version(0, 5), "https://github.com/SinaKh0/CleanDiscPlayer");
+            _logger.LogDebug("MusicBrainzService initialized");
         }
 
-        public async Task<LookupResult> LookupDiscAsync(string discId)
+        /// <summary>
+        /// Looks up disc and returns all matching releases.
+        /// </summary>
+        public async Task<DiscLookupResult> LookupDiscWithOptionsAsync(string discId)
         {
             try
             {
@@ -30,20 +41,10 @@ namespace CleanDiscPlayer.Core.Metadata
                 // https://musicbrainz.org/cdtoc/x92mQ8poBkpI5gLY9PyPa.935Oo-
                 // https://musicbrainz.org/ws/2/discid/x92mQ8poBkpI5gLY9PyPa.935Oo-
 
+                _logger.LogDebug("Starting disc lookup for: {DiscId}", discId);
 
-                // Check if we should wait before making the request
-                if (_lastRateLimitInfo.HasValue)
-                {
-                    var info = _lastRateLimitInfo.Value;
-                    if (info.RemainingRequests.HasValue && info.RemainingRequests.Value == 0)
-                    {
-                        if (info.ResetIn.HasValue)
-                        {
-                            Console.WriteLine($"Rate limit reached. Waiting {info.ResetIn.Value} seconds...");
-                            await Task.Delay(TimeSpan.FromSeconds(info.ResetIn.Value + 1));
-                        }
-                    }
-                }
+                // Check rate limit before request
+                await HandleRateLimitAsync();
 
                 // Look up the disc by its ID
                 var disc = await _query.LookupDiscIdAsync(
@@ -58,7 +59,6 @@ namespace CleanDiscPlayer.Core.Metadata
 
                 var foundDisc = disc.Disc;
 
-                //Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(foundDisc, new JsonSerializerOptions { WriteIndented = true }));
                 // DEBUG: See raw disc object
                 //var discJson = JsonSerializer.Serialize(disc, new JsonSerializerOptions { WriteIndented = true });
                 //Console.WriteLine("=== RAW DISC RESPONSE ===");
@@ -66,158 +66,178 @@ namespace CleanDiscPlayer.Core.Metadata
 
                 if (foundDisc?.Releases == null || !foundDisc.Releases.Any())
                 {
-                    return LookupResult.Fail(
+                    _logger.LogWarning("No releases found for disc ID: {DiscId}", discId);
+                    return DiscLookupResult.Fail(
                         "This disc was not found in the MusicBrainz database.",
                         LookupErrorType.NotFound
                     );
                 }
 
-                Console.WriteLine($"Found {foundDisc.Releases.Count} Release(s).");
+                _logger.LogInformation("Found {ReleaseCount} release(s) for disc ID: {DiscId}", foundDisc.Releases.Count, discId);
 
-                // Get the first release (usually the most relevant)
-                var release = foundDisc.Releases.First();
+                // Map to ReleaseOption objects
+                var releaseOptions = foundDisc.Releases.Select(r => new ReleaseOption(
+                    release: r,
+                    title: r.Title ?? "Unknown Album",
+                    artist: GetArtistName(r.ArtistCredit),
+                    date: r.Date?.ToString() ?? "Unknown Date"
+                )).ToList();
 
-
-                // If there are multiple releases, let user select the most appropriate one.
-                if (foundDisc.Releases.Count > 1)
-                {
-                    // Display release options to the user
-                    Console.WriteLine($"Multiple releases ({foundDisc.Releases.Count}) found for this disc ID:");
-                    for (int i = 0; i < foundDisc.Releases.Count; i++)
-                    {
-                        var r = foundDisc.Releases[i];
-                        Console.WriteLine($"{i + 1}. {r.Title} by {GetArtistName(r.ArtistCredit)} ({r.Date?.ToString() ?? "Unknown Date"})");
-                    }
-
-                    // Prompt user for selection
-                    Console.Write("Select a release (default - 1): ");
-
-                    var command = Console.ReadLine()?.Trim().ToLower();
-
-                    // validate user input and handle invalid selections
-                    if (int.TryParse(command, out int selectedIndex) && selectedIndex > 0 && selectedIndex <= foundDisc.Releases.Count)
-                    {
-                        release = foundDisc.Releases[selectedIndex - 1];
-                    }
-                    else if (string.IsNullOrEmpty(command)) 
-                    {
-                        Console.WriteLine("Defaulting to the first release.");
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid selection. Defaulting to the first release.");
-                    }
-                }
-
-                Console.WriteLine($"Selected release: {release.Title} by {GetArtistName(release.ArtistCredit)}");
-
-                // THIS IS AN UNNECESSARY EXTRA LOOKUP - THE DISC RESPONSE ALREADY INCLUDES THE TRACKS
-                // Fetch full release details with recordings (tracks)
-                //var fullRelease = await _query.LookupReleaseAsync(
-                //    release.Id,
-                //    Include.Recordings | Include.ArtistCredits | Include.DiscIds
-                //);
-
-                var albumInfo = MapToAlbumInfo(release, discId);
-                return LookupResult.Ok(albumInfo);
+                return DiscLookupResult.Ok(releaseOptions);
             }
-            catch (HttpRequestException ex) when (ex.InnerException is System.Security.Authentication.AuthenticationException)
-            {
-                return LookupResult.Fail(
-                    "SSL connection failed. Please check your system certificates and internet connection.",
-                    LookupErrorType.SslError
-                );
-            }
-            catch (HttpRequestException ex) when (
-                ex.StatusCode == System.Net.HttpStatusCode.ServiceUnavailable ||
-                ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
-            {
-                return LookupResult.Fail(
-                    "MusicBrainz rate limit exceeded. Please wait a moment and try again.",
-                    LookupErrorType.RateLimited
-                );
-            }
-            catch (HttpError ex) when (ex.Status == System.Net.HttpStatusCode.ServiceUnavailable)
+            catch (HttpError ex) when (ex.Status == System.Net.HttpStatusCode.ServiceUnavailable || ex.Status == System.Net.HttpStatusCode.TooManyRequests)
             {
                 // 503 - Rate limiting
                 // The HttpError object has all the response details
-                Console.WriteLine("=== RATE LIMIT HIT ===");
-                Console.WriteLine($"Status: {ex.Status}");
-                Console.WriteLine($"Reason: {ex.Reason}");
-                Console.WriteLine($"Content: {ex.Content}");
-
-                if (ex.ResponseHeaders != null)
-                {
-                    var info = new RateLimitInfo(ex.ResponseHeaders);
-                    Console.WriteLine($"Allowed: {info.AllowedRequests}");
-                    Console.WriteLine($"Remaining: {info.RemainingRequests}");
-                    Console.WriteLine($"Reset In: {info.ResetIn} seconds");
-                    Console.WriteLine($"Reset At: {info.ResetAt}");
-                }
-                Console.WriteLine("======================");
-
-                // Extract rate limit info from error response headers if available
-                if (ex.ResponseHeaders != null)
-                {
-                    var rateLimitInfo = new RateLimitInfo(ex.ResponseHeaders);
-
-                    var message = "Rate limit exceeded.";
-                    if (rateLimitInfo.ResetIn.HasValue)
-                    {
-                        message += $" Try again in {rateLimitInfo.ResetIn.Value} seconds.";
-                    }
-                    else if (rateLimitInfo.ResetAt.HasValue)
-                    {
-                        message += $" Try again after {rateLimitInfo.ResetAt.Value:HH:mm:ss}.";
-                    }
-
-                    return LookupResult.Fail(message, LookupErrorType.RateLimited);
-                }
-
-                return LookupResult.Fail(
-                    "Rate limit exceeded. Please wait before trying again.",
-                    LookupErrorType.RateLimited
-                );
+                _logger.LogWarning("Rate limit hit: {Status} - {Reason}", ex.Status, ex.Reason);
+                return HandleRateLimitError(ex);
             }
             catch (HttpError ex) when (ex.Status == System.Net.HttpStatusCode.NotFound)
             {
-                return LookupResult.Fail(
+                _logger.LogWarning("Disc not found (404): {DiscId}", discId);
+                return DiscLookupResult.Fail(
                     "Disc ID not found in MusicBrainz database.",
                     LookupErrorType.NotFound
                 );
             }
             catch (HttpError ex)
             {
-                // All other HTTP errors
+                _logger.LogError("HTTP error during lookup: {Status} - {Reason} - {Content}", ex.Status, ex.Reason, ex.Content);
+
                 var message = $"HTTP {(int)ex.Status} ({ex.Status})";
                 if (ex.Reason != null)
                     message += $": {ex.Reason}";
-                if (ex.Content != null)
-                    message += $"\n{ex.Content}";
 
-                return LookupResult.Fail(message, LookupErrorType.NetworkError);
+                return DiscLookupResult.Fail(message, LookupErrorType.NetworkError);
             }
-            catch (TaskCanceledException)
+            catch (HttpRequestException ex) when (ex.InnerException is System.Security.Authentication.AuthenticationException)
             {
-                return LookupResult.Fail(
+                _logger.LogError(ex, "SSL authentication error during lookup");
+                return DiscLookupResult.Fail(
+                    "SSL connection failed. Please check your system certificates and internet connection.",
+                    LookupErrorType.SslError
+                );
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Request timed out");
+                return DiscLookupResult.Fail(
                     "Request timed out. Please check your internet connection.",
                     LookupErrorType.Timeout
                 );
             }
-            catch (HttpRequestException ex)
-            {
-                return LookupResult.Fail(
-                    $"Network error: {ex.Message}",
-                    LookupErrorType.NetworkError
-                );
-            }
             catch (Exception ex)
             {
-                return LookupResult.Fail(
+                _logger.LogError(ex, "Unexpected error during disc lookup");
+                return DiscLookupResult.Fail(
                     $"Unexpected error: {ex.Message}",
                     LookupErrorType.Unknown
                 );
             }
+        }
+
+        /// <summary>
+        /// Looks up album and track information for a given disc ID.
+        /// Automatically selects the first release if multiple are found.
+        /// </summary>
+        public async Task<LookupResult> LookupDiscAsync(string discId)
+        {
+            _logger.LogInformation("Looking up disc ID: {DiscId}", discId);
+
+            var discResult = await LookupDiscWithOptionsAsync(discId);
+
+            if (!discResult.Success)
+            {
+                return LookupResult.Fail(discResult.ErrorMessage!, discResult.ErrorType);
+            }
+
+            if (discResult.Releases == null || !discResult.Releases.Any())
+            {
+                return LookupResult.Fail("No releases found", LookupErrorType.NotFound);
+            }
+
+            // Automatically select first release
+            var selectedRelease = discResult.Releases.First();
+            _logger.LogInformation("Auto-selected first release: {Title} by {Artist}",
+                selectedRelease.Title, selectedRelease.Artist);
+
+            return await GetAlbumInfoAsync(selectedRelease.Release, discId);
+        }
+
+        /// <summary>
+        /// Gets full album info for a specific release.
+        /// </summary>
+        public async Task<LookupResult> GetAlbumInfoAsync(IRelease release, string discId)
+        {
+            try
+            {
+                _logger.LogDebug("Processing release: {Title} by {Artist}", release.Title, GetArtistName(release.ArtistCredit));
+
+                var albumInfo = MapToAlbumInfo(release, discId);
+
+                _logger.LogInformation("Successfully mapped album info: {Title}, {TrackCount} tracks", albumInfo.Title, albumInfo.Tracks.Count);
+
+                return LookupResult.Ok(albumInfo);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error mapping album info for release: {ReleaseId}", release.Id);
+                return LookupResult.Fail(
+                    $"Error processing release: {ex.Message}",
+                    LookupErrorType.Unknown
+                );
+            }
+        }
+
+        /// <summary>
+        /// Handles rate limit checking and waiting if necessary.
+        /// </summary>
+        private async Task HandleRateLimitAsync()
+        {
+            if (!_lastRateLimitInfo.HasValue)
+                return;
+
+            var info = _lastRateLimitInfo.Value;
+            if (info.RemainingRequests.HasValue && info.RemainingRequests.Value == 0)
+            {
+                if (info.ResetIn.HasValue)
+                {
+                    var waitSeconds = info.ResetIn.Value + 1;
+                    _logger.LogWarning("Rate limit reached. Waiting {WaitSeconds} seconds...", waitSeconds);
+                    await Task.Delay(TimeSpan.FromSeconds(waitSeconds));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Handles rate limit errors and extracts timing information.
+        /// </summary>
+        private DiscLookupResult HandleRateLimitError(HttpError ex)
+        {
+            if (ex.ResponseHeaders != null)
+            {
+                var rateLimitInfo = new RateLimitInfo(ex.ResponseHeaders);
+                _lastRateLimitInfo = rateLimitInfo;
+
+                _logger.LogDebug("Rate limit info - Allowed: {Allowed}, Remaining: {Remaining}, Reset in: {ResetIn}s", rateLimitInfo.AllowedRequests, rateLimitInfo.RemainingRequests, rateLimitInfo.ResetIn);
+
+                var message = "Rate limit exceeded.";
+                if (rateLimitInfo.ResetIn.HasValue)
+                {
+                    message += $" Try again in {rateLimitInfo.ResetIn.Value} seconds.";
+                }
+                else if (rateLimitInfo.ResetAt.HasValue)
+                {
+                    message += $" Try again after {rateLimitInfo.ResetAt.Value:HH:mm:ss}.";
+                }
+
+                return DiscLookupResult.Fail(message, LookupErrorType.RateLimited);
+            }
+
+            return DiscLookupResult.Fail(
+                "Rate limit exceeded. Please wait before trying again.",
+                LookupErrorType.RateLimited
+            );
         }
 
         /// <summary>
@@ -238,31 +258,48 @@ namespace CleanDiscPlayer.Core.Metadata
                 MusicBrainzId = release.Id.ToString()
             };
 
-            // Get tracks from the first medium (disc)
-            var medium = release.Media?.FirstOrDefault();
-
-            Console.WriteLine($"Release has {release.Media?.Count ?? 0} medium(s).");
-
-            for (var mediumIndex = 0; mediumIndex < release.Media?.Count; mediumIndex++)
+            if (release.Media == null || !release.Media.Any())
             {
-                var currentMedium = release.Media[mediumIndex];
-                if (currentMedium.Tracks != null)
-                {
-                    Console.WriteLine($"Medium {mediumIndex + 1}. {currentMedium.Title}. \n    With {currentMedium.TrackCount} track(s) and disc id: {currentMedium.Discs?.FirstOrDefault()?.Id}.");
+                _logger.LogWarning("Release {ReleaseId} has no media", release.Id);
+                return albumInfo;
+            }
 
-                    if (currentMedium.Discs != null && currentMedium.Discs.Any(d => d.Id.ToString() == discId))
-                    {
-                        Console.WriteLine($"Found matching medium for disc ID {discId} on medium {mediumIndex + 1}.");
-                        medium = currentMedium;
-                        albumInfo.MediumTitle = currentMedium.Title ?? albumInfo.Title;
-                        break;
-                    }
+            _logger.LogDebug("Release has {MediaCount} medium(s)", release.Media.Count);
+
+            IMedium? matchedMedium = null;
+
+            // Find the medium that matches our disc ID
+            foreach (var medium in release.Media)
+            {
+                if (medium.Tracks == null)
+                    continue;
+
+                var mediumDiscId = medium.Discs?.FirstOrDefault()?.Id.ToString();
+                _logger.LogDebug("Medium {Position}: {Title} (Disc ID: {DiscId}, {TrackCount} tracks)",
+                    medium.Position, medium.Title ?? "Untitled", mediumDiscId, medium.TrackCount);
+
+                // Check if this medium matches our disc ID
+                if (medium.Discs != null && medium.Discs.Any(d => d.Id.ToString() == discId))
+                {
+                    _logger.LogInformation("Found matching medium at position {Position} for disc ID: {DiscId}",
+                        medium.Position, discId);
+                    matchedMedium = medium;
+                    albumInfo.MediumTitle = medium.Title ?? albumInfo.Title;
+                    break;
                 }
             }
 
-            if (medium?.Tracks != null)
+            // Fallback to first medium if no match found
+            if (matchedMedium == null)
             {
-                foreach (var track in medium.Tracks)
+                matchedMedium = release.Media?.First();
+                _logger.LogWarning("No matching medium found for disc ID {DiscId}, using first medium", discId);
+            }
+
+            // Map tracks from the matched medium
+            if (matchedMedium?.Tracks != null)
+            {
+                foreach (var track in matchedMedium.Tracks)
                 {
                     albumInfo.Tracks.Add(new TrackMetadata
                     {
@@ -272,6 +309,8 @@ namespace CleanDiscPlayer.Core.Metadata
                         Length = track.Length.HasValue ? track.Length.Value : null
                     });
                 }
+
+                _logger.LogDebug("Mapped {TrackCount} tracks from medium", albumInfo.Tracks.Count);
             }
 
             return albumInfo;
@@ -292,6 +331,12 @@ namespace CleanDiscPlayer.Core.Metadata
                 return "Unknown Artist";
 
             return string.Join(" & ", artistCredit.Select(ac => ac.Artist?.Name ?? "Unknown"));
+        }
+
+        public void Dispose()
+        {
+            _query?.Dispose();
+            _logger.LogDebug("MusicBrainzService disposed");
         }
     }
 }
