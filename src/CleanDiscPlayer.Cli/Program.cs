@@ -207,7 +207,10 @@ namespace CleanDiscPlayer.Cli
 
                     // Display album and track metadata
                     Console.WriteLine($"\nAlbum: {albumInfo.Title}");
-                    Console.WriteLine($"Media Title: {albumInfo.MediumTitle}");
+                    if (!string.IsNullOrEmpty(albumInfo.MediumTitle) && albumInfo.MediumTitle != albumInfo.Title)
+                    {
+                        Console.WriteLine($"Media Title: {albumInfo.MediumTitle}");
+                    }
                     Console.WriteLine($"Artist: {albumInfo.Artist}");
                     Console.WriteLine($"Release Date: {albumInfo.ReleaseDate}");
                     Console.WriteLine($"\nTracks:");
@@ -250,8 +253,8 @@ namespace CleanDiscPlayer.Cli
                 Console.WriteLine("  play        - Start playback from first track");
                 Console.WriteLine("  play #      - Play specified track number");
                 Console.WriteLine("  shuffleplay - Play in shuffle mode from random track");
-                Console.WriteLine("  pause       - Resume playback");
-                Console.WriteLine("  resume      - Skip to next track");
+                Console.WriteLine("  pause       - Pase playback");
+                Console.WriteLine("  resume      - Resume playback");
                 Console.WriteLine("  prev        - Skip to previous track");
                 Console.WriteLine("  next        - Skip to next track");
                 Console.WriteLine("  seek t      - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
