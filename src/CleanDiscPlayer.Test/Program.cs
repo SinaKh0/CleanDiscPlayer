@@ -1,5 +1,8 @@
-﻿using CleanDiscPlayer.Core.Metadata;
+﻿using CleanDiscPlayer.Core.Logging;
+using CleanDiscPlayer.Core.Metadata;
 using MetaBrainz.MusicBrainz.Interfaces.Entities;
+using Microsoft.Extensions.Logging;
+using Serilog;
 using System.Text;
 
 namespace CleanDiscPlayer.Tests
@@ -13,6 +16,7 @@ namespace CleanDiscPlayer.Tests
     /// automated testing environments.</remarks>
     internal class ManualTests
     {
+
         private static async Task Main(string[] args)
         {
             // change encoding to UTF-8 to support special characters in metadata and track titles
@@ -24,7 +28,22 @@ namespace CleanDiscPlayer.Tests
 
         private static async Task TestMusicBrainzLookups()
         {
-            var service = new MusicBrainzService();
+            // Create logger for the service
+            using var loggerFactory = LoggerFactory.Create(builder =>
+            {
+                // Configure Serilog
+                var config = new LoggingConfiguration
+                {
+                    ConsoleLevel = LogLevel.Warning,
+                    EnableConsoleLogging = true,
+                    EnableFileLogging = false
+                };
+                builder.ConfigureAppLogging(config);
+            });
+
+
+            var logger = loggerFactory.CreateLogger<MusicBrainzService>();
+            var service = new MusicBrainzService(logger);
 
             // To open the test cases in MusicBrainz, use the following URL format:
             // Website: https://musicbrainz.org/cdtoc/<discId>          ex: https://musicbrainz.org/cdtoc/x92mQ8poBkpI5gLY9PyPa.935Oo-
@@ -43,27 +62,53 @@ namespace CleanDiscPlayer.Tests
             foreach (var (name, discId) in testCases)
             {
                 Console.WriteLine($"\n=== TESTING: {name} ===");
-                var result = await service.LookupDiscAsync(discId);
+                //var result = await service.LookupDiscAsync(discId);
 
-                if (result.Success)
+                // Use LookupDiscWithOptionsAsync to see all releases
+                var discResult = await service.LookupDiscWithOptionsAsync(discId);
+
+                if (discResult.Success && discResult.Releases != null)
                 {
-                    var albumInfo = result.Album;
-                    Console.WriteLine($"✓ Found: {albumInfo.Title} by {albumInfo.Artist} ({albumInfo.ReleaseDate}) with {albumInfo.Tracks.Count} track(s).");
+                    if (discResult.Releases.Count == 1)
+                    {
+                        // Single release - get full album info
+                        var release = discResult.Releases[0];
+                        var albumResult = await service.GetAlbumInfoAsync(release.Release, discId);
+
+                        if (albumResult.Success)
+                        {
+                            var albumInfo = albumResult.Album!;
+                            Console.WriteLine($"✓ Found: {albumInfo.Title} by {albumInfo.Artist} ({albumInfo.ReleaseDate}) with {albumInfo.Tracks.Count} track(s).");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"✗ Failed to get album info: {albumResult.ErrorMessage}");
+                        }
+                    }
+                    else
+                    {
+                        // Multiple releases - just show them
+                        Console.WriteLine($"✓ Found {discResult.Releases.Count} release(s):");
+                        foreach (var release in discResult.Releases)
+                        {
+                            Console.WriteLine($"   - {release.Title} by {release.Artist} ({release.Date})");
+                        }
+                    }
                 }
                 else
                 {
-                    Console.WriteLine($"✗ Lookup failed: {result.ErrorMessage}");
+                    Console.WriteLine($"✗ Lookup failed: {discResult.ErrorMessage}");
 
-                    switch (result.ErrorType)
+                    switch (discResult.ErrorType)
                     {
                         case LookupErrorType.NotFound:
-                            Console.WriteLine("Album not found in MusicBrainz database.");
+                            Console.WriteLine("   Album not found in MusicBrainz database.");
                             break;
                         case LookupErrorType.RateLimited:
-                            Console.WriteLine("Tip: Wait at least 1 second between requests.");
+                            Console.WriteLine("   Tip: Wait at least 1 second between requests.");
                             break;
                         case LookupErrorType.SslError:
-                            Console.WriteLine("Try: Check your system date/time.");
+                            Console.WriteLine("   Try: Check your system date/time.");
                             break;
                     }
                 }
@@ -71,16 +116,19 @@ namespace CleanDiscPlayer.Tests
                 await Task.Delay(1000); // Rate limit
             }
 
-            await TestRateLimiting();
+            await TestRateLimiting(logger);
+
+            service.Dispose();
         }
 
 
-        public static async Task TestRateLimiting()
+        public static async Task TestRateLimiting(ILogger<MusicBrainzService> logger)
         {
-            var service = new MusicBrainzService();
+            var service = new MusicBrainzService(logger);
             var testDiscId = "pcgmzmDWsctNXPLxoQsXadhvaLA-";
 
-            Console.WriteLine("\nTesting rate limiting by making rapid requests...\n");
+            Console.WriteLine("\n=== TESTING RATE LIMITING ===");
+            Console.WriteLine("Making rapid requests to trigger rate limit...\n");
 
             for (int i = 1; i <= 5; i++)
             {
@@ -106,6 +154,7 @@ namespace CleanDiscPlayer.Tests
 
                 // Don't wait - send immediately to trigger rate limit
             }
+            service.Dispose();
         }
     }
 }

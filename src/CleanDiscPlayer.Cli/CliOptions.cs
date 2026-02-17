@@ -160,7 +160,7 @@ namespace CleanDiscPlayer.Cli
             //else if (Quiet)
             //    config.ConsoleLevel = LogLevel.Warning;
             else
-                config.ConsoleLevel = LogLevel.Information;
+                config.ConsoleLevel = LogLevel.Warning;
 
             return config;
         }
