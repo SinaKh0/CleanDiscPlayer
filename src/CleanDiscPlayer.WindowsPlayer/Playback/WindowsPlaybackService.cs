@@ -385,6 +385,11 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             return _trackCount;
         }
 
+        public Queue<int> GetPlayQueue()
+        {
+            return new Queue<int>(_playQueue);
+        }
+
         public void ShuffleQueue()
         {
             _logger.LogInformation("Shuffling play queue");

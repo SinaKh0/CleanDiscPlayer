@@ -497,6 +497,12 @@ namespace CleanDiscPlayer.Cli
             Console.WriteLine($"] {current:mm\\:ss} / {total:mm\\:ss}");
             Console.WriteLine($"  Volume: {volume}% | Shuffle: {(shuffleMode ? "ON" : "OFF")} | Repeat: {repeatMode}");
             Console.WriteLine("");
+
+            Queue<int> queue = mediaPlayer.GetPlayQueue();
+            Console.Write("  Upcoming Tracks in Queue: ");
+            Console.Write(string.Join(", ", queue.Select(i => $"{i}")));
+            Console.WriteLine("");
+            Console.WriteLine("");
         }
 
 

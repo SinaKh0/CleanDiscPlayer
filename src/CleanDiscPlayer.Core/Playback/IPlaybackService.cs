@@ -96,6 +96,11 @@
         public int TrackCount();
 
         /// <summary>
+        /// Returns the play queue as a queue of track numbers (1-based).
+        /// </summary>
+        public Queue<int> GetPlayQueue();
+
+        /// <summary>
         /// Logs the current state of the object for debugging or monitoring purposes.
         /// </summary>
         public void LogCurrentState();
