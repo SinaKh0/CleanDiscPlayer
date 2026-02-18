@@ -475,8 +475,11 @@ namespace CleanDiscPlayer.Cli
             var (current, total, position, volume, shuffleMode, repeatMode) = mediaPlayer.GetCurrentTrackProgress();
             int curr = mediaPlayer.CurrentTrack();
 
-            if (result.Album?.Tracks == null || curr < 0 || curr >= result.Album.Tracks.Count)
+            if (result.Album?.Tracks == null || curr < 1 || curr > mediaPlayer.TrackCount())
+            {
+                Console.WriteLine("No media playing or queued to play.");
                 return;
+            }
 
             var track = result.Album.Tracks[curr];
 
