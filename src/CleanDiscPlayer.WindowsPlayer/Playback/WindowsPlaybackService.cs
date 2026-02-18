@@ -447,6 +447,34 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
             _logger.LogInformation("===================");
         }
 
+        public (TimeSpan Time, TimeSpan Length, float Position, int Volume, bool ShuffleMode, string CurrentRepeatMode) GetCurrentTrackProgress() {
+            // https://stackoverflow.com/questions/68367609/vlc-libvlc-state-t-state-machine
+            // if media player state is nothing special or ended, then dont compute these lines:
+            if (_mediaPlayer?.State != VLCState.NothingSpecial && _mediaPlayer?.State != VLCState.Ended && _mediaPlayer?.State != VLCState.Stopped && _currentTrack > 0 && _currentTrack <= _trackCount)
+            {
+                string repeatMode = "OFF";
+
+                if (_repeatMode == RepeatMode.RepeatAll)
+                    repeatMode = "ALL";
+                else if (_repeatMode == RepeatMode.RepeatTrack)
+                    repeatMode = "TRACK";
+
+
+                    return (
+                        TimeSpan.FromMilliseconds((double)_mediaPlayer.Time),
+                        TimeSpan.FromMilliseconds((double)_mediaPlayer.Length),
+                        _mediaPlayer.Position,
+                        _mediaPlayer.Volume,
+                        _shuffleEnabled,
+                        repeatMode
+                    );
+            }
+            else
+            {
+                return (TimeSpan.Zero, TimeSpan.Zero, 0f, 0, false, "OFF");
+            }
+        }
+
         public void SetRepeatMode(int mode)
         {
             // implement repeat mode (3 modes: no repeat, repeat disc, repeat track)

@@ -119,5 +119,10 @@
         /// track is currently playing, only the remaining tracks are shuffled and added to the queue. The play history
         /// is reset as part of this operation.</remarks>
         public void ShuffleQueue();
+
+        /// <summary>
+        /// Returns the current playing track's progress information
+        /// </summary>
+        public (TimeSpan Time, TimeSpan Length, float Position, int Volume, bool ShuffleMode, string CurrentRepeatMode) GetCurrentTrackProgress();
     }
 }

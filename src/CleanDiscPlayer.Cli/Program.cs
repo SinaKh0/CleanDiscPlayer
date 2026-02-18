@@ -1,11 +1,12 @@
-﻿using CleanDiscPlayer.Core.Metadata;
-using CleanDiscPlayer.Core.Disc;
-using CleanDiscPlayer.Core.Playback;
+﻿using CleanDiscPlayer.Core.Disc;
 using CleanDiscPlayer.Core.Logging;
+using CleanDiscPlayer.Core.Metadata;
+using CleanDiscPlayer.Core.Playback;
 using CleanDiscPlayer.WindowsPlayer.Disc;
 using CleanDiscPlayer.WindowsPlayer.Playback;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Numerics;
 using System.Text;
 
 namespace CleanDiscPlayer.Cli
@@ -101,12 +102,12 @@ namespace CleanDiscPlayer.Cli
             Console.WriteLine($"Disc ID:   {disc.DiscId}");
             Console.WriteLine($"Duration:  {disc.Duration}");
             Console.WriteLine($"Tracks:    {disc.TrackCount}");
-            Console.WriteLine($"TOC:       {disc.TOCId}");
-            Console.WriteLine($"Track Lengths:");
-            foreach (var track in disc.Tracks)
-            {
-                Console.WriteLine($"  {track.Number}. {track.Duration:mm\\:ss}");
-            }
+            //Console.WriteLine($"TOC:       {disc.TOCId}");
+            //Console.WriteLine($"Track Lengths:");
+            //foreach (var track in disc.Tracks)
+            //{
+            //    Console.WriteLine($"  {track.Number}. {track.Duration:mm\\:ss}");
+            //}
             Console.WriteLine("");
 
             // Look up album metadata from MusicBrainz
@@ -194,7 +195,7 @@ namespace CleanDiscPlayer.Cli
                 }
 
                 // Get full album info for the selected release
-                Console.WriteLine($"\nSelected: {selectedRelease.Title} by {selectedRelease.Artist}");
+                Console.WriteLine($"Selected: {selectedRelease.Title} by {selectedRelease.Artist}");
                 logger.LogDebug("Fetching full album info for selected release...");
 
                 result = await metadataService.GetAlbumInfoAsync(selectedRelease.Release, disc.DiscId);
@@ -230,6 +231,8 @@ namespace CleanDiscPlayer.Cli
             logger.LogDebug("Initializing playback service...");
             mediaPlayer.Init(disc.DevicePath, disc.TrackCount);
 
+            Console.WriteLine("\nType 'help' for commands");
+
             // Start interactive command loop
             await CommandLoop(mediaPlayer, discService, result, disc, logger);
         }
@@ -248,25 +251,25 @@ namespace CleanDiscPlayer.Cli
             while (true)
             {
                 // Display command menu
-                Console.WriteLine("\n=== CleanDisc Player CLI ===");
-                Console.WriteLine("Commands:");
-                Console.WriteLine("  play        - Start playback from first track");
-                Console.WriteLine("  play #      - Play specified track number");
-                Console.WriteLine("  shuffleplay - Play in shuffle mode from random track");
-                Console.WriteLine("  pause       - Pase playback");
-                Console.WriteLine("  resume      - Resume playback");
-                Console.WriteLine("  prev        - Skip to previous track");
-                Console.WriteLine("  next        - Skip to next track");
-                Console.WriteLine("  seek t      - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
-                Console.WriteLine("  repeat m    - Set repeat mode (0: no repeat, 1: repeat all, 2: repeat track)");
-                Console.WriteLine("  shuffle m   - Toggle shuffle mode (0: off, 1: on)");
-                Console.WriteLine("  tracklist   - Show track listing and metadata");
-                Console.WriteLine("  volume      - Adjust volume of player (0-100%)");
-                Console.WriteLine("  stop        - Stop playback");
-                Console.WriteLine("  eject       - Eject disc and exit application");
-                Console.WriteLine("  exit        - Exit application");
-                Console.WriteLine("  log         - Provides some info on status of player");
-                Console.Write("Enter command: ");
+                //Console.WriteLine("\n=== CleanDisc Player CLI ===");
+                //Console.WriteLine("Commands:");
+                //Console.WriteLine("  play        - Start playback from first track");
+                //Console.WriteLine("  play #      - Play specified track number");
+                //Console.WriteLine("  shuffleplay - Play in shuffle mode from random track");
+                //Console.WriteLine("  pause       - Pase playback");
+                //Console.WriteLine("  resume      - Resume playback");
+                //Console.WriteLine("  prev        - Skip to previous track");
+                //Console.WriteLine("  next        - Skip to next track");
+                //Console.WriteLine("  seek t      - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
+                //Console.WriteLine("  repeat m    - Set repeat mode (0: no repeat, 1: repeat all, 2: repeat track)");
+                //Console.WriteLine("  shuffle m   - Toggle shuffle mode (0: off, 1: on)");
+                //Console.WriteLine("  tracklist   - Show track listing and metadata");
+                //Console.WriteLine("  volume      - Adjust volume of player (0-100%)");
+                //Console.WriteLine("  stop        - Stop playback");
+                //Console.WriteLine("  eject       - Eject disc and exit application");
+                //Console.WriteLine("  exit        - Exit application");
+                //Console.WriteLine("  log         - Provides some info on status of player");
+                Console.Write("> ");//Console.Write("Enter command: ");
 
                 var command = Console.ReadLine()?.Trim().ToLower();
 
@@ -391,6 +394,16 @@ namespace CleanDiscPlayer.Cli
                         mediaPlayer.StopPlayback();
                         break;
 
+                    case "status":
+                        logger.LogInformation("Printing Progress Bar");
+                        ShowDetailedStatus(mediaPlayer, result);
+                        break;
+
+                    case "help":
+                        logger.LogInformation("Printing Available Commands");
+                        ShowCommands();
+                        break;
+
                     case "tracklist":
                         if (result.Album?.Tracks != null)
                         {
@@ -429,6 +442,60 @@ namespace CleanDiscPlayer.Cli
             }
         }
 
+        /// <summary>
+        /// Writes all available commands to console
+        /// </summary>
+        private static void ShowCommands()
+        {
+            // Display command menu
+            Console.WriteLine("");
+            Console.WriteLine("Commands:");
+            Console.WriteLine("  play        - Start playback from first track");
+            Console.WriteLine("  play #      - Play specified track number");
+            Console.WriteLine("  shuffleplay - Play in shuffle mode from random track");
+            Console.WriteLine("  pause       - Pase playback");
+            Console.WriteLine("  resume      - Resume playback");
+            Console.WriteLine("  prev        - Skip to previous track");
+            Console.WriteLine("  next        - Skip to next track");
+            Console.WriteLine("  seek t      - Seek to specified time in minutes and seconds (mm:ss or hh:mm:ss)");
+            Console.WriteLine("  repeat m    - Set repeat mode (0: no repeat, 1: repeat all, 2: repeat track)");
+            Console.WriteLine("  shuffle m   - Toggle shuffle mode (0: off, 1: on)");
+            Console.WriteLine("  tracklist   - Show track listing and metadata");
+            Console.WriteLine("  volume      - Adjust volume of player (0-100%)");
+            Console.WriteLine("  stop        - Stop playback");
+            Console.WriteLine("  eject       - Eject disc and exit application");
+            Console.WriteLine("  exit        - Exit application");
+            Console.WriteLine("  log         - Provides some info on status of player");
+            Console.WriteLine("  status      - Provides info on track playback status");
+            Console.WriteLine("");
+        }
+
+        private static void ShowDetailedStatus(IPlaybackService mediaPlayer, LookupResult result)
+        {
+            var (current, total, position, volume, shuffleMode, repeatMode) = mediaPlayer.GetCurrentTrackProgress();
+            int curr = mediaPlayer.CurrentTrack();
+
+            if (result.Album?.Tracks == null || curr < 0 || curr >= result.Album.Tracks.Count)
+                return;
+
+            var track = result.Album.Tracks[curr];
+
+            Console.WriteLine($"\n♪ {track.Title} - {track.Artist}");
+            Console.WriteLine($"  Track {curr + 1} of {mediaPlayer.TrackCount()}");
+
+            // Simple progress bar
+            int barWidth = 50;
+            float progress = position;
+            int filled = (int)(barWidth * progress);
+
+            Console.Write("  [");
+            Console.Write(new string('█', filled));
+            Console.Write(new string('-', barWidth - filled));
+            Console.WriteLine($"] {current:mm\\:ss} / {total:mm\\:ss}");
+            Console.WriteLine($"  Volume: {volume}% | Shuffle: {(shuffleMode ? "ON" : "OFF")} | Repeat: {repeatMode}");
+            Console.WriteLine("");
+        }
+
 
         /// <summary>
         /// Displays information about the currently playing track to the console.
@@ -446,12 +513,16 @@ namespace CleanDiscPlayer.Cli
             // Validate track index and metadata availability
             if (curr < 0 || result.Album?.Tracks == null || curr >= result.Album.Tracks.Count)
             {
-                Console.WriteLine("Currently Playing Track: Unknown");
+                Console.WriteLine("");
+                Console.WriteLine("♪ Now playing: Unknown");
+                Console.WriteLine("");
                 return;
             }
 
             var track = result.Album.Tracks[curr];
-            Console.WriteLine($"Currently Playing Track: {curr}. {track.Title} - {track.Artist} ({track.Length:mm\\:ss})");
+            Console.WriteLine("");
+            Console.WriteLine($"♪ Now playing: {curr}. {track.Title} - {track.Artist} ({track.Length:mm\\:ss})");
+            Console.WriteLine("");
         }
     }
 }
