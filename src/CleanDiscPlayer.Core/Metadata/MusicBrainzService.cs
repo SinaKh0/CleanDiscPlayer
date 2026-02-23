@@ -3,6 +3,7 @@ using MetaBrainz.MusicBrainz;
 using MetaBrainz.MusicBrainz.Interfaces.Entities;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Headers;
+using System.Net.Sockets;
 using System.Text.Json;
 
 namespace CleanDiscPlayer.Core.Metadata
@@ -45,7 +46,7 @@ namespace CleanDiscPlayer.Core.Metadata
                     _logger.LogDebug("Disc lookup attempt {Attempt}/{MaxRetries} for: {DiscId}", attempt, maxRetries, discId);
                     return await LookupDiscWithOptionsInternalAsync(discId);
                 }
-                catch (HttpRequestException ex) when (ex.InnerException is System.IO.IOException || ex.InnerException is System.Net.Sockets.SocketException)
+                catch (HttpRequestException ex) when (ex.InnerException is System.IO.IOException || ex.InnerException is System.Net.Sockets.SocketException || IsTransientNetworkError(ex))
                 {
                     _logger.LogWarning("Network error on attempt {Attempt}/{MaxRetries}: {Message}", attempt, maxRetries, ex.Message);
 
@@ -67,6 +68,47 @@ namespace CleanDiscPlayer.Core.Metadata
             // Should never reach here due to maxRetries check, but compiler needs it
             _logger.LogError("Unexpected: Exited retry loop without returning");
             return DiscLookupResult.Fail("Unexpected retry logic error", LookupErrorType.Unknown);
+        }
+
+        /// <summary>
+        /// Determines whether the given HttpRequestException represents a transient network failure that is safe to retry.
+        /// </summary>
+        /// <param name="ex">The HttpRequestException thrown by HttpClient.</param>
+        /// <returns>True if the failure is considered transient and retryable.</returns>
+        private bool IsTransientNetworkError(HttpRequestException ex)
+        {
+            _logger.LogWarning("Checking for transient network error: {Message}", ex.Message);
+
+            Exception? current = ex;
+
+            while (current != null)
+            {
+                // Socket-level transport errors
+                if (current is SocketException sockEx)
+                {
+                    _logger.LogWarning("Socket error: {Code}", sockEx.SocketErrorCode);
+                    // 10054 = connection reset by peer (Remote host forcibly closed the connection.)
+                    // 10053 = software caused connection abort (Local software aborted the connection.)
+                    // 10060 = timeout (Connection attempt timed out.)
+                    return sockEx.SocketErrorCode is
+                        SocketError.ConnectionReset or
+                        SocketError.ConnectionAborted or
+                        SocketError.TimedOut;
+                }
+
+                // IOException often wraps lower-level socket failures.
+                if (current is IOException)
+                    return true;
+
+                // TLS handshake failures can occur due to abrupt connection
+                // termination during SSL negotiation.
+                if (current is System.Security.Authentication.AuthenticationException)
+                    return true;
+
+                current = current.InnerException;
+            }
+
+            return false;
         }
 
         /// <summary>
