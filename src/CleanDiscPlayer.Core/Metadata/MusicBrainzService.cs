@@ -33,6 +33,47 @@ namespace CleanDiscPlayer.Core.Metadata
         /// </summary>
         public async Task<DiscLookupResult> LookupDiscWithOptionsAsync(string discId)
         {
+            const int maxRetries = 3;
+            int attempt = 0;
+
+            while (attempt < maxRetries)
+            {
+                attempt++;
+
+                try
+                {
+                    _logger.LogDebug("Disc lookup attempt {Attempt}/{MaxRetries} for: {DiscId}", attempt, maxRetries, discId);
+                    return await LookupDiscWithOptionsInternalAsync(discId);
+                }
+                catch (HttpRequestException ex) when (ex.InnerException is System.IO.IOException || ex.InnerException is System.Net.Sockets.SocketException)
+                {
+                    _logger.LogWarning("Network error on attempt {Attempt}/{MaxRetries}: {Message}", attempt, maxRetries, ex.Message);
+
+                    if (attempt >= maxRetries)
+                    {
+                        _logger.LogError("All retry attempts failed");
+                        return DiscLookupResult.Fail(
+                            "Network connection failed after multiple attempts. Please check your internet connection.",
+                            LookupErrorType.NetworkError
+                        );
+                    }
+
+                    // Exponential backoff: 1s, 2s, 4s
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt - 1));
+                    _logger.LogInformation("Retrying in {Delay} seconds...", delay.TotalSeconds);
+                    await Task.Delay(delay);
+                }
+            }
+            // Should never reach here due to maxRetries check, but compiler needs it
+            _logger.LogError("Unexpected: Exited retry loop without returning");
+            return DiscLookupResult.Fail("Unexpected retry logic error", LookupErrorType.Unknown);
+        }
+
+        /// <summary>
+        /// Internal method that performs the actual lookup (renamed from LookupDiscWithOptionsAsync).
+        /// </summary>
+        private async Task<DiscLookupResult> LookupDiscWithOptionsInternalAsync(string discId)
+        {
             try
             {
                 // https://musicbrainz.org/doc/MusicBrainz_API
