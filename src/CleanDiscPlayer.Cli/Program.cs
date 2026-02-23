@@ -171,7 +171,7 @@ namespace CleanDiscPlayer.Cli
                         {
                             titleDisplay += $" ({r.Disambiguation})";
                         }
-                        
+
                         var catalogDisplay = !string.IsNullOrEmpty(r.CatalogNumber) ? $" [{r.CatalogNumber}]" : "";
 
                         Console.WriteLine($"  {i + 1}. {titleDisplay} by {r.Artist} ({r.Date}){catalogDisplay}");
@@ -349,13 +349,13 @@ namespace CleanDiscPlayer.Cli
                     }
                     continue;
                 }
-                
+
                 switch (command)
                 {
-                    case "log":
-                        LogTrackInfo(mediaPlayer, result);
-                        mediaPlayer.LogCurrentState();
-                        break;
+                    //case "log":
+                    //    LogTrackInfo(mediaPlayer, result);
+                    //    mediaPlayer.LogCurrentState();
+                    //    break;
 
                     case "play":
                         logger.LogInformation("Starting playback from beginning");
@@ -447,7 +447,7 @@ namespace CleanDiscPlayer.Cli
                         Console.ReadLine();
                         break;
                 }
-                
+
             }
         }
 
@@ -474,7 +474,7 @@ namespace CleanDiscPlayer.Cli
             Console.WriteLine("  stop        - Stop playback");
             Console.WriteLine("  eject       - Eject disc and exit application");
             Console.WriteLine("  exit        - Exit application");
-            Console.WriteLine("  log         - Provides some info on status of player");
+            //Console.WriteLine("  log         - Provides some info on status of player");
             Console.WriteLine("  status      - Provides info on track playback status");
             Console.WriteLine("");
         }
@@ -529,7 +529,7 @@ namespace CleanDiscPlayer.Cli
             int curr = mediaPlayer.CurrentTrack();
 
             // Validate track index and metadata availability
-            if (curr < 0 || result.Album?.Tracks == null || curr >= result.Album.Tracks.Count)
+            if (curr <= 0 || result.Album?.Tracks == null || curr > result.Album.Tracks.Count)
             {
                 Console.WriteLine("");
                 Console.WriteLine("♪ Now playing: Unknown");
