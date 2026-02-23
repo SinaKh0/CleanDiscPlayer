@@ -73,12 +73,24 @@ namespace CleanDiscPlayer.Core.Metadata
         /// </summary>
         public string Date { get; set; }
 
+        /// <summary>
+        /// Disambiguation comment (e.g., "初回限定LIVE盤").
+        /// </summary>
+        public string? Disambiguation { get; set; }
+
+        /// <summary>
+        /// Catalog number (e.g., "UPCH-29382").
+        /// </summary>
+        public string? CatalogNumber { get; set; }
+
         public ReleaseOption(IRelease release, string title, string artist, string date)
         {
             Release = release;
             Title = title;
             Artist = artist;
             Date = date;
+            Disambiguation = release.Disambiguation;
+            CatalogNumber = release.LabelInfo?.FirstOrDefault()?.CatalogNumber;
         }
     }
 }

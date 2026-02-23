@@ -193,6 +193,11 @@ namespace CleanDiscPlayer.WindowsPlayer.Playback
 
         public void PlayFromTrack(int trackNumber)
         {
+            if (!IsValidTrack(trackNumber, out string error))
+            {
+                _logger.LogWarning("Invalid track number {TrackNumber}: {Error}", trackNumber, error);
+                return;
+            }
             _logger.LogInformation("Playing from track {TrackNumber} (shuffle: {ShuffleEnabled})", trackNumber, _shuffleEnabled);
 
             // if user selects a track number from queue, we need to jump to it and update the queue and history

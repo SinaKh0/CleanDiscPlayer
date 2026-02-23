@@ -102,7 +102,7 @@ namespace CleanDiscPlayer.Cli
             Console.WriteLine($"Disc ID:   {disc.DiscId}");
             Console.WriteLine($"Duration:  {disc.Duration}");
             Console.WriteLine($"Tracks:    {disc.TrackCount}");
-            //Console.WriteLine($"TOC:       {disc.TOCId}");
+            Console.WriteLine($"TOC:       {disc.TOCId}");
             //Console.WriteLine($"Track Lengths:");
             //foreach (var track in disc.Tracks)
             //{
@@ -165,7 +165,16 @@ namespace CleanDiscPlayer.Cli
                     for (int i = 0; i < discResult.Releases.Count; i++)
                     {
                         var r = discResult.Releases[i];
-                        Console.WriteLine($"  {i + 1}. {r.Title} by {r.Artist} ({r.Date})");
+
+                        var titleDisplay = r.Title;
+                        if (!string.IsNullOrEmpty(r.Disambiguation))
+                        {
+                            titleDisplay += $" ({r.Disambiguation})";
+                        }
+                        
+                        var catalogDisplay = !string.IsNullOrEmpty(r.CatalogNumber) ? $" [{r.CatalogNumber}]" : "";
+
+                        Console.WriteLine($"  {i + 1}. {titleDisplay} by {r.Artist} ({r.Date}){catalogDisplay}");
                     }
 
                     Console.Write("\nSelect a release (1-{0}, default: 1): ", discResult.Releases.Count);
@@ -481,7 +490,7 @@ namespace CleanDiscPlayer.Cli
                 return;
             }
 
-            var track = result.Album.Tracks[curr];
+            var track = result.Album.Tracks[curr - 1];
 
             Console.WriteLine($"\n♪ {track.Title} - {track.Artist}");
             Console.WriteLine($"  Track {curr + 1} of {mediaPlayer.TrackCount()}");
@@ -528,7 +537,7 @@ namespace CleanDiscPlayer.Cli
                 return;
             }
 
-            var track = result.Album.Tracks[curr];
+            var track = result.Album.Tracks[curr - 1];
             Console.WriteLine("");
             Console.WriteLine($"♪ Now playing: {curr}. {track.Title} - {track.Artist} ({track.Length:mm\\:ss})");
             Console.WriteLine("");

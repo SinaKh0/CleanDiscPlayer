@@ -52,7 +52,8 @@ namespace CleanDiscPlayer.Core.Metadata
                     toc: null,
                     inc: Include.Artists |
                          Include.Recordings |
-                         Include.ReleaseGroups,
+                         Include.ReleaseGroups |
+                         Include.Labels,
                     allMediaFormats: true,
                     noStubs: true
                 );
